@@ -1,0 +1,24 @@
+<resources>
+    <color name="app_bg">#F4F7FB</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_soft">#F8FAFD</color>
+    <color name="primary">#3457D5</color>
+    <color name="primary_dark">#263E9B</color>
+    <color name="primary_soft">#EAF0FF</color>
+    <color name="accent_green">#2E8B68</color>
+    <color name="accent_green_soft">#E7F6EF</color>
+    <color name="accent_orange">#E58A2B</color>
+    <color name="accent_orange_soft">#FFF2E4</color>
+    <color name="danger">#D64B4B</color>
+    <color name="danger_soft">#FDECEC</color>
+    <color name="text_primary">#182033</color>
+    <color name="text_secondary">#697386</color>
+    <color name="divider">#E4E9F2</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- 기존 코드/화면과의 호환용 -->
+    <color name="dark_panel">#2B2B2B</color>
+    <color name="dark_button">#3A3A3A</color>
+    <color name="red_active">#D93A32</color>
+    <color name="text_light">#F5F5F5</color>
+</resources>

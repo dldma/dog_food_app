@@ -1,0 +1,50 @@
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local machine / Android SDK path
+local.properties
+
+# Android build outputs
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing / secrets (do not commit private keys)
+*.jks
+*.keystore
+keystore.properties
+
+# Logs / temp
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+
+# Windows Explorer generated files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS (in case the project is opened on Mac later)
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code local workspace settings (optional editor-specific files)
+.vscode/
