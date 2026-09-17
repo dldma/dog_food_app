@@ -140,6 +140,22 @@ uint8_t clock_synced = 0;
 volatile U32 seconds_of_day = 0;
 uint16_t last_checked_minute = 0xFFFF;
 
+// 최근 생활 급식 실행 기록. Bluetooth가 끊겨 있어도 RAM에 보관했다가 Q 명령으로 재전송한다.
+#define FEED_EVENT_CAPACITY 10
+typedef struct {
+    uint16_t sequence;
+    uint8_t hour;
+    uint8_t minute;
+    uint16_t food_g;
+    uint8_t pill_a;
+    uint8_t pill_b;
+} FeedEvent;
+
+FeedEvent feed_events[FEED_EVENT_CAPACITY];
+uint8_t feed_event_count = 0;
+uint8_t feed_event_head = 0;
+uint16_t next_feed_event_sequence = 1;
+
 static U32 clock_get_seconds(void)
 {
     U32 value;
@@ -229,6 +245,54 @@ static void TX0_STR(const char *s)
     while (*s) TX0_char(*s++);
 }
 
+static void send_feed_event(const FeedEvent *event)
+{
+    snprintf(tx_str, sizeof(tx_str), "!L,%u,%02u%02u,%u,%u,%u\n",
+             (unsigned int)event->sequence,
+             (unsigned int)event->hour,
+             (unsigned int)event->minute,
+             (unsigned int)event->food_g,
+             (unsigned int)event->pill_a,
+             (unsigned int)event->pill_b);
+    TX0_STR(tx_str);
+}
+
+static void record_life_feed_event(uint8_t hour, uint8_t minute,
+                                   uint16_t food_g, uint8_t pill_a, uint8_t pill_b)
+{
+    uint8_t index;
+    FeedEvent *event;
+
+    if (feed_event_count < FEED_EVENT_CAPACITY) {
+        index = (uint8_t)((feed_event_head + feed_event_count) % FEED_EVENT_CAPACITY);
+        feed_event_count++;
+    } else {
+        index = feed_event_head;
+        feed_event_head = (uint8_t)((feed_event_head + 1) % FEED_EVENT_CAPACITY);
+    }
+
+    event = &feed_events[index];
+    event->sequence = next_feed_event_sequence++;
+    if (next_feed_event_sequence == 0) next_feed_event_sequence = 1;
+    event->hour = hour;
+    event->minute = minute;
+    event->food_g = food_g;
+    event->pill_a = pill_a;
+    event->pill_b = pill_b;
+
+    // 연결되어 있으면 즉시 앱이 받으며, 연결이 없더라도 UART 송신 자체는 장치 동작에 영향을 주지 않는다.
+    send_feed_event(event);
+}
+
+static void replay_feed_events(void)
+{
+    uint8_t i;
+    for (i = 0; i < feed_event_count; i++) {
+        uint8_t index = (uint8_t)((feed_event_head + i) % FEED_EVENT_CAPACITY);
+        send_feed_event(&feed_events[index]);
+    }
+}
+
 ISR(USART0_RX_vect)
 {
     char data = UDR0;
@@ -253,7 +317,7 @@ ISR(USART0_RX_vect)
 
     // 다문자 패킷의 시작 문자. 기존 단일문자는 모두 소문자라 충돌하지 않는다.
     if (data == 'w' || data == 'T' || data == 'R' || data == 'S' ||
-        data == 'E' || data == 'X') {
+        data == 'E' || data == 'X' || data == 'Q') {
         rx_line_mode = 1;
         rx_line_idx = 0;
         rx_line[rx_line_idx++] = data;
@@ -618,6 +682,12 @@ static void process_stage5_line(char *buf)
         daily_schedule_enabled = 0;
         return;
     }
+
+    // Q : 현재 전원 세션 동안 보관된 생활 급식 실행 이벤트 재전송
+    if (buf[0] == 'Q' && buf[1] == '\0') {
+        replay_feed_events();
+        return;
+    }
 }
 
 static void check_daily_schedules(void)
@@ -640,6 +710,11 @@ static void check_daily_schedules(void)
             execute_feeding(daily_schedules[i].food_g,
                             daily_schedules[i].pill_a,
                             daily_schedules[i].pill_b);
+            record_life_feed_event(daily_schedules[i].hour,
+                                   daily_schedules[i].minute,
+                                   daily_schedules[i].food_g,
+                                   daily_schedules[i].pill_a,
+                                   daily_schedules[i].pill_b);
         }
     }
 }

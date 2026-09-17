@@ -130,18 +130,20 @@
                         android:maxLength="6" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.materialswitch.MaterialSwitch
+                <android.widget.Switch
                     android:id="@+id/switchNeutered"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:showText="false"
                     android:layout_marginTop="8dp"
                     android:text="중성화 완료"
                     android:textColor="@color/text_primary" />
 
-                <com.google.android.material.materialswitch.MaterialSwitch
+                <android.widget.Switch
                     android:id="@+id/switchOverweight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:showText="false"
                     android:text="비만 관리가 필요한 반려견"
                     android:textColor="@color/text_primary" />
             </LinearLayout>

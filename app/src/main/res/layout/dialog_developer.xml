@@ -104,6 +104,18 @@
                         app:cornerRadius="14dp" />
                 </LinearLayout>
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDevSimulation"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:layout_marginTop="10dp"
+                    android:text="장치 없이 시뮬레이션"
+                    android:textAllCaps="false"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="14dp"
+                    app:strokeColor="@color/primary" />
+
                 <TextView
                     android:id="@+id/txtDevModeWarning"
                     android:layout_width="match_parent"

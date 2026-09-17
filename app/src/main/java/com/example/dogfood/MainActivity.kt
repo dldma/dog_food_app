@@ -38,6 +38,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var foodConsumedTotal = 0
     private var hasReceivedPacket = false
     private var lastLifeScheduleSignature = ""
+    private var simulationEnabled = false
+    private var lastSimLifeMinuteKey = ""
+    private var simEventSequence = 1
 
     private var developerDialog: Dialog? = null
     private var developerBinding: DialogDeveloperBinding? = null
@@ -66,9 +69,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             context = this,
             onPacket = { state ->
                 runOnUiThread {
-                    hasReceivedPacket = true
-                    applyDogState(state)
+                    if (!simulationEnabled) {
+                        hasReceivedPacket = true
+                        applyDogState(state)
+                    }
                 }
+            },
+            onDeviceEvent = { event ->
+                runOnUiThread { handleDeviceFeedEvent(event) }
             },
             onConnectionChanged = { connected, message ->
                 runOnUiThread {
@@ -81,9 +89,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                         if (connected) R.drawable.bg_chip_green else R.drawable.bg_chip_neutral
                     )
                     if (connected) {
+                        if (simulationEnabled) disableSimulation(showToast = false)
                         toast("$message 연결 완료")
                         lastLifeScheduleSignature = ""
-                        handler.postDelayed({ syncLifeSchedulesToDevice(showToast = false) }, 700L)
+                        // 연결이 끊긴 동안 실행된 생활 급식 이벤트를 먼저 요청한 뒤 시간/예약을 동기화한다.
+                        bluetooth.send(DogFoodProtocol.CMD_EVENT_REPLAY)
+                        handler.postDelayed({ syncLifeSchedulesToDevice(showToast = false) }, 1100L)
                     }
                     refreshOverallStatus()
                     refreshDeveloperConnection()
@@ -166,8 +177,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun sendManual(command: String) {
-        if (bluetooth.isConnected()) bluetooth.send(command)
-        else toast("먼저 장치를 블루투스로 연결해주세요.")
+        if (isDeviceReady()) sendCommand(command)
+        else toast("먼저 장치를 블루투스로 연결하거나 개발자 시뮬레이션을 켜주세요.")
+    }
+
+    private fun isDeviceReady(): Boolean = bluetooth.isConnected() || simulationEnabled
+
+    private fun sendCommand(command: String) {
+        if (simulationEnabled) simulateCommand(command) else bluetooth.send(command)
     }
 
     private fun showDemoScheduleDialog() {
@@ -195,8 +212,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         dialogBinding.btnDemoCancel.setOnClickListener { dialog.dismiss() }
         dialogBinding.btnDemoStart.setOnClickListener {
-            if (!bluetooth.isConnected()) {
-                toast("예약을 시작하려면 먼저 장치를 블루투스로 연결해주세요.")
+            if (!isDeviceReady()) {
+                toast("예약을 시작하려면 장치를 연결하거나 개발자 시뮬레이션을 켜주세요.")
                 return@setOnClickListener
             }
 
@@ -235,11 +252,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val availableA = if (hasReceivedPacket) dogState.pillACount else 7
             val availableB = if (hasReceivedPacket) dogState.pillBCount else 7
             if (safeA.sum() > availableA) {
-                toast("${Prefs.pillAName(this)} 예약 총 ${safeA.sum()}개 · 현재 사용 가능 $availableA개입니다.")
+                toast("${Prefs.pillAName(this)} 예약 총 ${safeA.sum()}개 · 현재 사용 가능 ${availableA}개입니다.")
                 return@setOnClickListener
             }
             if (safeB.sum() > availableB) {
-                toast("${Prefs.pillBName(this)} 예약 총 ${safeB.sum()}개 · 현재 사용 가능 $availableB개입니다.")
+                toast("${Prefs.pillBName(this)} 예약 총 ${safeB.sum()}개 · 현재 사용 가능 ${availableB}개입니다.")
                 return@setOnClickListener
             }
 
@@ -266,8 +283,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         pillsA: List<Int>,
         pillsB: List<Int>,
     ) {
-        if (!bluetooth.isConnected()) {
-            toast("시연을 시작하려면 먼저 장치를 연결해주세요.")
+        if (!isDeviceReady()) {
+            toast("시연을 시작하려면 장치를 연결하거나 개발자 시뮬레이션을 켜주세요.")
             return
         }
 
@@ -289,11 +306,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         renderPlans()
 
         // 시연 중 생활 예약이 같은 시각에 겹치지 않도록 예약 실행만 잠시 중지합니다.
-        bluetooth.send(DogFoodProtocol.CMD_DAILY_PAUSE)
+        sendCommand(DogFoodProtocol.CMD_DAILY_PAUSE)
         // 'k'는 토글 명령이므로 이미 자동 모드라면 다시 보내지 않는다.
         if (dogState.startMode == 0) {
             handler.postDelayed({
-                if (bluetooth.isConnected()) bluetooth.send(DogFoodProtocol.CMD_START)
+                if (isDeviceReady()) sendCommand(DogFoodProtocol.CMD_START)
             }, 250L)
         }
         toast("시연 예약 3건을 시작했습니다.")
@@ -316,6 +333,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val now = LocalDateTime.now()
         binding.txtNow.text = now.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일  HH:mm:ss"))
 
+        if (simulationEnabled && Prefs.lifeEnabled(this)) {
+            simulateLifeScheduleIfNeeded(now)
+        }
+
         if (!sequenceRunning) return
 
         plans.forEach { plan ->
@@ -335,8 +356,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val name = Prefs.dogName(this)
         speak(if (name.isBlank()) "밥먹자." else "${name}야. 밥먹자.")
 
-        if (bluetooth.isConnected()) {
-            bluetooth.send(
+        if (isDeviceReady()) {
+            sendCommand(
                 DogFoodProtocol.feedingCommand(
                     foodGram = plan.foodGram,
                     pillA = plan.pillA,
@@ -377,8 +398,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             it.measureAt = null
         }
         styleStartButton(active = false)
-        if (sendReset && bluetooth.isConnected()) {
-            bluetooth.send(DogFoodProtocol.CMD_RESET)
+        if (sendReset && isDeviceReady()) {
+            sendCommand(DogFoodProtocol.CMD_RESET)
             // j 명령은 생활 예약도 중지하므로, 사용자가 생활 모드를 켜둔 경우 다시 동기화합니다.
             if (Prefs.lifeEnabled(this)) {
                 handler.postDelayed({ syncLifeSchedulesToDevice(showToast = false) }, 800L)
@@ -443,7 +464,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun refreshOverallStatus() {
-        if (!bluetooth.isConnected()) {
+        if (!bluetooth.isConnected() && !simulationEnabled) {
             binding.txtOverallStatus.text = "장치를 연결해주세요"
             return
         }
@@ -550,6 +571,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         binding.txtLifeSync.text = when {
+            simulationEnabled -> if (lastSync.isBlank()) "시뮬레이션 모드 · 예약 동작을 장치 없이 확인할 수 있습니다." else "마지막 적용 · $lastSync"
             !bluetooth.isConnected() -> "장치 연결 시 휴대폰 현재 시간과 저장된 예약을 자동 동기화합니다."
             lastSync.isBlank() -> "장치 연결됨 · 예약 동기화 준비 중"
             else -> "마지막 장치 전송 · $lastSync"
@@ -561,7 +583,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun lifeScheduleSignature(): String {
         val schedules = Prefs.lifeSchedules(this)
         return buildString {
-            append(Prefs.lifeEnabled(this))
+            append(Prefs.lifeEnabled(this@MainActivity))
             schedules.forEach {
                 append('|').append(it.hour).append(':').append(it.minute)
                     .append(',').append(it.foodGram)
@@ -572,12 +594,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun syncLifeSchedulesToDevice(showToast: Boolean) {
+        val schedules = Prefs.lifeSchedules(this).take(DogFoodProtocol.MAX_DAILY_SCHEDULES)
+
+        if (simulationEnabled) {
+            val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MM/dd HH:mm:ss")) + " · 시뮬레이션"
+            Prefs.setLastDeviceSync(this, stamp)
+            lastLifeScheduleSignature = lifeScheduleSignature()
+            refreshLifeScheduleCard()
+            if (showToast) toast("시뮬레이션 장치에 현재 시간과 예약 ${schedules.size}개를 적용했습니다.")
+            return
+        }
+
         if (!bluetooth.isConnected()) {
             if (showToast) toast("먼저 장치를 블루투스로 연결해주세요.")
             return
         }
 
-        val schedules = Prefs.lifeSchedules(this).take(DogFoodProtocol.MAX_DAILY_SCHEDULES)
         val enabled = Prefs.lifeEnabled(this)
         if (enabled && schedules.isEmpty()) {
             if (showToast) toast("생활 모드 예약을 1개 이상 추가해주세요.")
@@ -635,6 +667,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         dialogBinding.btnDevClose.setOnClickListener { dialog.dismiss() }
         dialogBinding.btnDevBluetooth.setOnClickListener { ensureBluetoothPermissionAndShowDevices() }
+        dialogBinding.btnDevSimulation.setOnClickListener {
+            if (bluetooth.isConnected()) {
+                toast("실제 장치 연결 중에는 시뮬레이션을 켤 수 없습니다.")
+            } else if (simulationEnabled) {
+                disableSimulation(showToast = true)
+            } else {
+                enableSimulation()
+            }
+        }
 
         dialogBinding.btnDevManualMode.setOnClickListener {
             if (!requireDeveloperConnection()) return@setOnClickListener
@@ -689,9 +730,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         dialogBinding.btnDevStopAll.setOnClickListener {
             if (!requireDeveloperConnection()) return@setOnClickListener
-            bluetooth.send(DogFoodProtocol.CMD_FOOD_MOTOR_OFF)
-            bluetooth.send(DogFoodProtocol.CMD_WATER_MOTOR_OFF)
-            bluetooth.send(DogFoodProtocol.CMD_COVER_STOP)
+            sendCommand(DogFoodProtocol.CMD_FOOD_MOTOR_OFF)
+            sendCommand(DogFoodProtocol.CMD_WATER_MOTOR_OFF)
+            sendCommand(DogFoodProtocol.CMD_COVER_STOP)
             appendDeveloperLog("전체 DC 모터 정지 · b / d / g")
         }
 
@@ -703,11 +744,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun refreshDeveloperConnection() {
         val dev = developerBinding ?: return
         val connected = bluetooth.isConnected()
-        dev.txtDevConnection.text = if (connected) "● 연결됨" else "● 연결 안됨"
+        dev.txtDevConnection.text = when {
+            simulationEnabled -> "● 시뮬레이션"
+            connected -> "● 연결됨"
+            else -> "● 연결 안됨"
+        }
         dev.txtDevConnection.setTextColor(
-            color(if (connected) R.color.accent_green else R.color.text_secondary)
+            color(if (connected || simulationEnabled) R.color.accent_green else R.color.text_secondary)
         )
         dev.btnDevBluetooth.text = if (connected) "장치 변경" else "장치 연결"
+        dev.btnDevSimulation.text = if (simulationEnabled) "시뮬레이션 종료" else "장치 없이 시뮬레이션"
     }
 
     private fun refreshDeveloperPanel(state: DogState) {
@@ -747,16 +793,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun requireDeveloperConnection(): Boolean {
-        if (bluetooth.isConnected()) return true
-        toast("먼저 장치를 블루투스로 연결해주세요.")
-        appendDeveloperLog("전송 실패 · 블루투스 연결 필요")
+        if (isDeviceReady()) return true
+        toast("장치를 연결하거나 시뮬레이션을 켜주세요.")
+        appendDeveloperLog("전송 실패 · 장치 연결 또는 시뮬레이션 필요")
         return false
     }
 
     private fun sendDeveloper(command: String, label: String) {
         if (!requireDeveloperConnection()) return
-        bluetooth.send(command)
-        appendDeveloperLog("$label  →  '$command'")
+        sendCommand(command)
+        appendDeveloperLog("$label  →  '$command'${if (simulationEnabled) " · SIM" else ""}")
     }
 
     private fun runTimedMotor(
@@ -766,12 +812,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         label: String,
     ) {
         if (!requireDeveloperConnection()) return
-        bluetooth.send(onCommand)
-        appendDeveloperLog("$label ON  →  '$onCommand'")
+        sendCommand(onCommand)
+        appendDeveloperLog("$label ON  →  '$onCommand'${if (simulationEnabled) " · SIM" else ""}")
         handler.postDelayed({
-            if (bluetooth.isConnected()) {
-                bluetooth.send(offCommand)
-                appendDeveloperLog("$label 자동 정지  →  '$offCommand'")
+            if (isDeviceReady()) {
+                sendCommand(offCommand)
+                appendDeveloperLog("$label 자동 정지  →  '$offCommand'${if (simulationEnabled) " · SIM" else ""}")
             }
         }, durationMs)
     }
@@ -790,11 +836,119 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         // ATmega의 45° 함수가 약 1초 동안 블로킹되므로 명령이 덮어쓰이지 않게 간격을 둡니다.
         repeat(repeats) { index ->
             handler.postDelayed({
-                if (bluetooth.isConnected()) {
-                    bluetooth.send(command)
-                    appendDeveloperLog("$label ${index + 1}/$repeats  →  '$command'")
+                if (isDeviceReady()) {
+                    sendCommand(command)
+                    appendDeveloperLog("$label ${index + 1}/$repeats  →  '$command'${if (simulationEnabled) " · SIM" else ""}")
                 }
             }, index * 1300L)
+        }
+    }
+
+    private fun enableSimulation() {
+        simulationEnabled = true
+        hasReceivedPacket = true
+        dogState = DogState(
+            startMode = 0,
+            waterSet = 150,
+            waterWeight = 125,
+            foodWeight = 42,
+            pillACount = 7,
+            pillBCount = 7,
+            waterLow = 1,
+            coverMode = 0,
+            foodLow = 1,
+            waterEat = 0,
+        )
+        applyDogState(dogState)
+        binding.txtConnection.text = "● 시뮬레이션"
+        binding.txtConnection.setTextColor(color(R.color.accent_green))
+        binding.txtConnection.setBackgroundResource(R.drawable.bg_chip_green)
+        appendDeveloperLog("장치 없는 시뮬레이션 시작")
+        refreshDeveloperConnection()
+        refreshOverallStatus()
+        toast("시뮬레이션을 시작했습니다. 실제 모터는 동작하지 않습니다.")
+    }
+
+    private fun disableSimulation(showToast: Boolean) {
+        simulationEnabled = false
+        hasReceivedPacket = false
+        lastSimLifeMinuteKey = ""
+        if (!bluetooth.isConnected()) {
+            dogState = DogState()
+            applyDogState(dogState)
+            binding.txtConnection.text = "● 연결 안됨"
+            binding.txtConnection.setTextColor(color(R.color.text_secondary))
+            binding.txtConnection.setBackgroundResource(R.drawable.bg_chip_neutral)
+        }
+        refreshDeveloperConnection()
+        refreshOverallStatus()
+        if (showToast) toast("시뮬레이션을 종료했습니다.")
+    }
+
+    private fun simulateCommand(command: String) {
+        if (!simulationEnabled) return
+        var state = dogState
+        when {
+            command == DogFoodProtocol.CMD_WATER_UP -> state = state.copy(waterSet = (state.waterSet + 10).coerceAtMost(999))
+            command == DogFoodProtocol.CMD_WATER_DOWN -> state = state.copy(waterSet = (state.waterSet - 10).coerceAtLeast(0))
+            command == DogFoodProtocol.CMD_COVER_OPEN -> state = state.copy(coverMode = 0)
+            command == DogFoodProtocol.CMD_COVER_CLOSE -> state = state.copy(coverMode = 1)
+            command == DogFoodProtocol.CMD_REFILL_DONE -> state = state.copy(pillACount = 7, pillBCount = 7, waterLow = 1, foodLow = 1)
+            command == DogFoodProtocol.CMD_RESET -> state = DogState(waterSet = 100, waterWeight = 100, foodWeight = 50, pillACount = 7, pillBCount = 7, waterLow = 1, foodLow = 1)
+            command == DogFoodProtocol.CMD_START -> state = state.copy(startMode = if (state.startMode == 0) 1 else 0)
+            command == DogFoodProtocol.CMD_WATER_MOTOR_ON -> state = state.copy(waterWeight = (state.waterWeight + 15).coerceAtMost(999))
+            command == DogFoodProtocol.CMD_FOOD_MOTOR_ON -> state = state.copy(foodWeight = (state.foodWeight + 20).coerceAtMost(999))
+            command == DogFoodProtocol.CMD_PILL_A_STEP -> state = state.copy(pillACount = (state.pillACount - 1).coerceAtLeast(0))
+            command == DogFoodProtocol.CMD_PILL_B_STEP -> state = state.copy(pillBCount = (state.pillBCount - 1).coerceAtLeast(0))
+            command.startsWith("wx") -> {
+                val food = command.substringAfter('x').substringBefore('y').toIntOrNull() ?: 0
+                val a = command.substringAfter('y').substringBefore('z').toIntOrNull() ?: 0
+                val b = command.substringAfter('z').trim().toIntOrNull() ?: 0
+                state = state.copy(
+                    foodWeight = (food * 20 / 100).coerceAtLeast(0),
+                    pillACount = (state.pillACount - a).coerceAtLeast(0),
+                    pillBCount = (state.pillBCount - b).coerceAtLeast(0),
+                )
+            }
+        }
+        dogState = state
+        hasReceivedPacket = true
+        applyDogState(state)
+    }
+
+    private fun simulateLifeScheduleIfNeeded(now: LocalDateTime) {
+        val minuteKey = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
+        if (minuteKey == lastSimLifeMinuteKey) return
+        val schedule = Prefs.lifeSchedules(this).firstOrNull { it.hour == now.hour && it.minute == now.minute } ?: return
+        lastSimLifeMinuteKey = minuteKey
+        val event = DeviceFeedEvent(
+            sequence = simEventSequence++,
+            hour = now.hour,
+            minute = now.minute,
+            foodGram = schedule.foodGram,
+            pillA = schedule.pillA,
+            pillB = schedule.pillB,
+        )
+        handleDeviceFeedEvent(event)
+        dogState = dogState.copy(
+            foodWeight = (schedule.foodGram * 20 / 100).coerceAtLeast(0),
+            pillACount = (dogState.pillACount - schedule.pillA).coerceAtLeast(0),
+            pillBCount = (dogState.pillBCount - schedule.pillB).coerceAtLeast(0),
+        )
+        applyDogState(dogState)
+        appendDeveloperLog("생활 예약 시뮬레이션 실행 · ${schedule.timeText()}")
+    }
+
+    private fun handleDeviceFeedEvent(event: DeviceFeedEvent) {
+        val added = RecordStore.appendLifeExecution(
+            context = this,
+            event = event,
+            pillAName = Prefs.pillAName(this),
+            pillBName = Prefs.pillBName(this),
+        )
+        if (added) {
+            appendDeveloperLog("생활 급식 실행 확인 · %02d:%02d · 사료 %dg".format(event.hour, event.minute, event.foodGram))
+            toast("생활 급식 실행 기록을 저장했습니다.")
         }
     }
 

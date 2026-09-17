@@ -89,10 +89,11 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <com.google.android.material.materialswitch.MaterialSwitch
+                <android.widget.Switch
                     android:id="@+id/switchLifeEnabled"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" />
+                    android:showText="false"
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

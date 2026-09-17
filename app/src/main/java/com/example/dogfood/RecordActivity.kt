@@ -40,7 +40,7 @@ class RecordActivity : AppCompatActivity() {
 
         binding.txtTotalCount.text = records.size.toString()
         binding.txtTodayCount.text = today.size.toString()
-        binding.txtTodayFood.text = "${today.sumOf { it.foodEstimatedGram }} g"
+        binding.txtTodayFood.text = "${today.filter { it.foodEstimateAvailable }.sumOf { it.foodEstimatedGram }} g"
         binding.txtTodayWater.text = "${today.sumOf { it.waterEstimatedGram }} g"
 
         binding.recordContainer.removeAllViews()
@@ -102,10 +102,24 @@ class RecordActivity : AppCompatActivity() {
         header.addView(badge)
         body.addView(header)
 
+        if (record.foodDispensedGram > 0) {
+            body.addView(text("장치 실행", 12f, R.color.text_muted, bold = true).apply {
+                setPadding(0, dp(14), 0, dp(6))
+            })
+            body.addView(metricRow("사료 배출 설정량", "${record.foodDispensedGram} g", "실행 확인", "완료"))
+        }
+
         body.addView(text("추정 섭취량", 12f, R.color.text_muted, bold = true).apply {
             setPadding(0, dp(14), 0, dp(6))
         })
-        body.addView(metricRow("사료", "${record.foodEstimatedGram} g", "물", "${record.waterEstimatedGram} g"))
+        if (record.foodEstimateAvailable) {
+            body.addView(metricRow("사료", "${record.foodEstimatedGram} g", "물", "${record.waterEstimatedGram} g"))
+        } else {
+            body.addView(metricRow("사료", "미측정", "물", "미측정"))
+            body.addView(text("휴대폰이 연결되지 않은 상태에서 장치가 실행된 기록은 섭취 추정값을 확정하지 않습니다.", 11f, R.color.text_muted).apply {
+                setPadding(0, dp(7), 0, 0)
+            })
+        }
 
         body.addView(text("투약", 12f, R.color.text_muted, bold = true).apply {
             setPadding(0, dp(12), 0, dp(6))

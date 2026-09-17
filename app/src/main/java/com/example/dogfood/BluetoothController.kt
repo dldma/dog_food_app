@@ -12,12 +12,12 @@ import java.util.concurrent.Executors
 class BluetoothController(
     context: Context,
     private val onPacket: (DogState) -> Unit,
+    private val onDeviceEvent: (DeviceFeedEvent) -> Unit = {},
     private val onConnectionChanged: (Boolean, String) -> Unit,
 ) {
     private val adapter: BluetoothAdapter? =
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter
 
-    // 수신 루프는 연결 동안 계속 블로킹되므로 송신 전용 실행기와 반드시 분리합니다.
     private val connectionExecutor = Executors.newSingleThreadExecutor()
     private val sendExecutor = Executors.newSingleThreadExecutor()
 
@@ -67,18 +67,40 @@ class BluetoothController(
                 val count = input.read(temp)
                 if (count <= 0) break
                 buffer.append(String(temp, 0, count, Charsets.UTF_8))
+                consumeBuffer(buffer)
+            }
+        } catch (_: IOException) {
+        } finally {
+            if (socket === activeSocket) {
+                connected = false
+                closeQuietly()
+                onConnectionChanged(false, "연결 종료")
+            }
+        }
+    }
 
-                // 실제 Bluetooth SPP에서는 18글자 패킷이 나뉘어 들어올 수 있으므로
-                // D를 시작점으로 찾아 완전한 패킷이 될 때까지 버퍼링합니다.
-                while (true) {
-                    val start = buffer.indexOf("D")
-                    if (start < 0) {
-                        if (buffer.length > 256) buffer.clear()
-                        break
-                    }
-                    if (start > 0) buffer.delete(0, start)
-                    if (buffer.length < DogFoodProtocol.PACKET_LENGTH) break
+    // Dxxxxxxxxxxxxxxxxx : 기존 18글자 상태 패킷
+    // !L,...\n            : 생활 급식 실행 이벤트
+    // 두 형식이 같은 SPP 스트림에 섞여 와도 안전하게 분리한다.
+    private fun consumeBuffer(buffer: StringBuilder) {
+        while (buffer.isNotEmpty()) {
+            val dIndex = buffer.indexOf("D")
+            val eventIndex = buffer.indexOf("!")
+            val start = when {
+                dIndex < 0 -> eventIndex
+                eventIndex < 0 -> dIndex
+                else -> minOf(dIndex, eventIndex)
+            }
 
+            if (start < 0) {
+                if (buffer.length > 512) buffer.clear()
+                return
+            }
+            if (start > 0) buffer.delete(0, start)
+
+            when (buffer.first()) {
+                'D' -> {
+                    if (buffer.length < DogFoodProtocol.PACKET_LENGTH) return
                     val candidate = buffer.substring(0, DogFoodProtocol.PACKET_LENGTH)
                     val state = DogFoodProtocol.parse(candidate)
                     if (state != null) {
@@ -88,13 +110,21 @@ class BluetoothController(
                         buffer.deleteCharAt(0)
                     }
                 }
-            }
-        } catch (_: IOException) {
-        } finally {
-            if (socket === activeSocket) {
-                connected = false
-                closeQuietly()
-                onConnectionChanged(false, "연결 종료")
+                '!' -> {
+                    val newline = buffer.indexOf("\n")
+                    val carriage = buffer.indexOf("\r")
+                    val end = listOf(newline, carriage).filter { it >= 0 }.minOrNull() ?: -1
+                    if (end < 0) {
+                        if (buffer.length > 128) buffer.deleteCharAt(0)
+                        return
+                    }
+                    val line = buffer.substring(0, end)
+                    DogFoodProtocol.parseDeviceEvent(line)?.let(onDeviceEvent)
+                    var remove = end + 1
+                    while (remove < buffer.length && (buffer[remove] == '\n' || buffer[remove] == '\r')) remove++
+                    buffer.delete(0, remove)
+                }
+                else -> buffer.deleteCharAt(0)
             }
         }
     }
