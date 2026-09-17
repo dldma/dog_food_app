@@ -1,19 +1,29 @@
 <resources>
-    <color name="app_bg">#F4F7FB</color>
+    <!-- Stage 2: 보호자용 홈 화면 팔레트 -->
+    <color name="app_bg">#F6F8F5</color>
     <color name="surface">#FFFFFF</color>
-    <color name="surface_soft">#F8FAFD</color>
-    <color name="primary">#3457D5</color>
-    <color name="primary_dark">#263E9B</color>
-    <color name="primary_soft">#EAF0FF</color>
-    <color name="accent_green">#2E8B68</color>
-    <color name="accent_green_soft">#E7F6EF</color>
-    <color name="accent_orange">#E58A2B</color>
-    <color name="accent_orange_soft">#FFF2E4</color>
-    <color name="danger">#D64B4B</color>
+    <color name="surface_soft">#F1F5F2</color>
+
+    <color name="primary">#246B5E</color>
+    <color name="primary_dark">#174D44</color>
+    <color name="primary_soft">#E4F1ED</color>
+
+    <color name="accent_green">#2F8B63</color>
+    <color name="accent_green_soft">#E7F5ED</color>
+    <color name="accent_orange">#E98254</color>
+    <color name="accent_orange_soft">#FFF0E7</color>
+    <color name="accent_blue">#3B79B8</color>
+    <color name="accent_blue_soft">#E9F2FB</color>
+
+    <color name="danger">#D65353</color>
     <color name="danger_soft">#FDECEC</color>
-    <color name="text_primary">#182033</color>
-    <color name="text_secondary">#697386</color>
-    <color name="divider">#E4E9F2</color>
+    <color name="warning">#C77B28</color>
+    <color name="warning_soft">#FFF3DF</color>
+
+    <color name="text_primary">#17221F</color>
+    <color name="text_secondary">#68736F</color>
+    <color name="text_muted">#8C9692</color>
+    <color name="divider">#E2E9E5</color>
     <color name="white">#FFFFFF</color>
 
     <!-- 기존 코드/화면과의 호환용 -->

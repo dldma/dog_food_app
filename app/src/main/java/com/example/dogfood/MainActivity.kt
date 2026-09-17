@@ -69,6 +69,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     binding.txtConnection.setTextColor(
                         color(if (connected) R.color.accent_green else R.color.text_secondary)
                     )
+                    binding.txtConnection.setBackgroundResource(
+                        if (connected) R.drawable.bg_chip_green else R.drawable.bg_chip_neutral
+                    )
                     if (connected) toast("$message 연결 완료")
                     refreshOverallStatus()
                 }
@@ -257,7 +260,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun applyDogState(state: DogState) = with(binding) {
         dogState = state
 
-        txtWaterSet.text = state.waterSet.toString()
+        txtWaterSet.text = "${state.waterSet} g"
         txtWaterWeight.text = state.waterWeight.toString()
         txtFoodWeight.text = state.foodWeight.toString()
         txtPillA.text = state.pillACount.toString()
@@ -338,7 +341,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 sequenceRunning -> "대기"
                 else -> "설정값"
             }
-            rows[i].text = "${i + 1}회  ${plan.time.format(dateFmt)} ${plan.time.format(timeFmt)}    사료 ${plan.foodGram}g · A ${plan.pillA} · B ${plan.pillB}    $mark"
+            rows[i].text = buildString {
+                append("${i + 1}회 · ${plan.time.format(dateFmt)} ${plan.time.format(timeFmt)}")
+                append("  ·  $mark")
+                append("\n사료 ${plan.foodGram}g  ·  약 A ${plan.pillA}개  ·  약 B ${plan.pillB}개")
+            }
         }
 
         updateNextFeedingCard()

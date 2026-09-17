@@ -4,19 +4,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/app_bg"
-    android:fillViewport="true"
-    android:clipToPadding="false">
+    android:clipToPadding="false"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingStart="18dp"
-        android:paddingTop="18dp"
+        android:paddingTop="14dp"
         android:paddingEnd="18dp"
-        android:paddingBottom="28dp">
+        android:paddingBottom="30dp">
 
-        <!-- 헤더 -->
+        <!-- 상단 헤더 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -32,17 +32,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="PET CARE"
+                    android:text="DOG CARE STATION"
                     android:textColor="@color/primary"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textStyle="bold"
-                    android:letterSpacing="0.12" />
+                    android:letterSpacing="0.10" />
 
                 <TextView
                     android:id="@+id/txtDogName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="3dp"
                     android:text="반려견 케어 스테이션"
                     android:textColor="@color/text_primary"
                     android:textSize="25sp"
@@ -66,7 +66,6 @@
                 app:strokeWidth="1dp" />
         </LinearLayout>
 
-        <!-- 연결/모드 상태 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -102,7 +101,7 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- 메인 상태 카드 -->
+        <!-- 전체 장치 상태 -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -133,7 +132,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="현재 장치 상태"
-                            android:textColor="#C9D3FF"
+                            android:textColor="#BFD7D0"
                             android:textSize="13sp" />
 
                         <TextView
@@ -141,7 +140,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="상태 확인 대기 중"
+                            android:text="장치를 연결해주세요"
                             android:textColor="@color/white"
                             android:textSize="21sp"
                             android:textStyle="bold" />
@@ -149,10 +148,14 @@
 
                     <TextView
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_chip_dark"
+                        android:gravity="center"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
                         android:text="LIVE"
-                        android:textColor="#9FB0FF"
-                        android:textSize="12sp"
+                        android:textColor="#D6ECE6"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
@@ -160,20 +163,103 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="16dp"
-                    android:layout_marginBottom="14dp"
-                    android:background="#3650A3" />
+                    android:layout_marginBottom="13dp"
+                    android:background="#32665D" />
 
                 <TextView
                     android:id="@+id/txtNow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="----/--/-- --:--:--"
-                    android:textColor="#DDE4FF"
+                    android:text="----년 --월 --일  --:--:--"
+                    android:textColor="#D8E9E4"
                     android:textSize="13sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 현재 센서 -->
+        <!-- 다음 급식 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:text="다음 급식"
+            android:textColor="@color/text_primary"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="22dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/txtNextFeed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="시연 급식 대기 중"
+                            android:textColor="@color/text_primary"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/txtNextFeedDetail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="시작하면 현재 시각 기준으로 짧은 시연 예약을 진행합니다."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_round_primary_soft"
+                        android:gravity="center"
+                        android:text="급식"
+                        android:textColor="@color/primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="16dp"
+                    android:text="시연 급식 시작"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/primary"
+                    app:cornerRadius="16dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 현재 상태 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -187,11 +273,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:text="장치에서 수신한 센서 값을 실시간으로 표시합니다."
+            android:text="장치에서 수신한 값입니다. 연결 전에는 기본값이 표시됩니다."
             android:textColor="@color/text_secondary"
             android:textSize="12sp" />
 
-        <!-- 물/사료 카드 -->
+        <!-- 물 / 사료 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -200,7 +286,7 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
-                android:layout_height="150dp"
+                android:layout_height="164dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
                 app:cardBackgroundColor="@color/surface"
@@ -215,18 +301,36 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="물"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:background="@drawable/bg_round_blue_soft"
+                            android:gravity="center"
+                            android:text="물"
+                            android:textColor="@color/accent_blue"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="9dp"
+                            android:text="물그릇"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="10dp"
                         android:gravity="bottom"
                         android:orientation="horizontal">
 
@@ -236,14 +340,14 @@
                             android:layout_height="wrap_content"
                             android:text="0"
                             android:textColor="@color/text_primary"
-                            android:textSize="31sp"
+                            android:textSize="30sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="3dp"
-                            android:layout_marginBottom="5dp"
+                            android:layout_marginBottom="4dp"
                             android:text="g"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
@@ -253,48 +357,34 @@
                         android:id="@+id/txtWaterStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="9dp"
-                        android:text="상태 확인 중"
-                        android:textColor="@color/accent_green"
+                        android:layout_marginTop="5dp"
+                        android:text="연결 후 확인"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:layout_marginTop="4dp"
+                        android:text="유지 설정  "
+                        android:textColor="@color/text_muted"
+                        android:textSize="11sp" />
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="유지 설정"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11sp" />
-
-                        <TextView
-                            android:id="@+id/txtWaterSet"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text=" g"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11sp" />
-                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/txtWaterSet"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100"
+                        android:textColor="@color/primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
-                android:layout_height="150dp"
+                android:layout_height="164dp"
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
                 app:cardBackgroundColor="@color/surface"
@@ -309,18 +399,36 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="사료"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:background="@drawable/bg_round_orange_soft"
+                            android:gravity="center"
+                            android:text="밥"
+                            android:textColor="@color/accent_orange"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="9dp"
+                            android:text="사료그릇"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="10dp"
                         android:gravity="bottom"
                         android:orientation="horizontal">
 
@@ -330,14 +438,14 @@
                             android:layout_height="wrap_content"
                             android:text="0"
                             android:textColor="@color/text_primary"
-                            android:textSize="31sp"
+                            android:textSize="30sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="3dp"
-                            android:layout_marginBottom="5dp"
+                            android:layout_marginBottom="4dp"
                             android:text="g"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
@@ -347,16 +455,16 @@
                         android:id="@+id/txtFoodStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="9dp"
-                        android:text="상태 확인 중"
-                        android:textColor="@color/accent_green"
+                        android:layout_marginTop="5dp"
+                        android:text="연결 후 확인"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- 약 카드 -->
+        <!-- 약 상태 -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -383,7 +491,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="투약 카트리지"
+                        android:text="투약 준비 상태"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -392,8 +500,8 @@
                         android:id="@+id/txtPillStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="상태 확인 중"
-                        android:textColor="@color/accent_green"
+                        android:text="연결 후 확인"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -408,18 +516,21 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:background="@drawable/bg_soft_panel"
+                        android:orientation="vertical"
+                        android:padding="13dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="약 A"
+                            android:text="약 A 잔여"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
                             android:gravity="bottom"
                             android:orientation="horizontal">
 
@@ -429,7 +540,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="0"
                                 android:textColor="@color/text_primary"
-                                android:textSize="25sp"
+                                android:textSize="24sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -437,35 +548,35 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="3dp"
                                 android:layout_marginBottom="3dp"
-                                android:text="개 남음"
+                                android:text="개"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="46dp"
-                        android:layout_marginStart="14dp"
-                        android:layout_marginEnd="14dp"
-                        android:background="@color/divider" />
+                    <Space
+                        android:layout_width="10dp"
+                        android:layout_height="1dp" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:background="@drawable/bg_soft_panel"
+                        android:orientation="vertical"
+                        android:padding="13dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="약 B"
+                            android:text="약 B 잔여"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
                             android:gravity="bottom"
                             android:orientation="horizontal">
 
@@ -475,7 +586,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="0"
                                 android:textColor="@color/text_primary"
-                                android:textSize="25sp"
+                                android:textSize="24sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -483,130 +594,12 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="3dp"
                                 android:layout_marginBottom="3dp"
-                                android:text="개 남음"
+                                android:text="개"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 다음 급식 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="급식 일정"
-            android:textColor="@color/text_primary"
-            android:textSize="19sp"
-            android:textStyle="bold" />
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            app:cardBackgroundColor="@color/primary_soft"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="17dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="다음 급식"
-                    android:textColor="@color/primary"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/txtNextFeed"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:text="시연 급식 대기 중"
-                    android:textColor="@color/text_primary"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/txtNextFeedDetail"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="START를 누르면 짧은 간격의 시연 예약을 생성합니다."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnStart"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginTop="14dp"
-                    android:text="시연 급식 시작"
-                    android:textAllCaps="false"
-                    android:textColor="@color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:backgroundTint="@color/primary"
-                    app:cornerRadius="15dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/divider"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <TextView
-                    android:id="@+id/txtPlan1"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="8dp"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/divider" />
-
-                <TextView
-                    android:id="@+id/txtPlan2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="8dp"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/divider" />
-
-                <TextView
-                    android:id="@+id/txtPlan3"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="8dp"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -624,9 +617,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:text="센서 변화로 계산한 값이며 실제 섭취량과 차이가 있을 수 있습니다."
+            android:text="센서 변화로 계산한 값이므로 실제 섭취량과 차이가 있을 수 있습니다."
             android:textColor="@color/text_secondary"
-            android:textSize="11sp" />
+            android:textSize="12sp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -650,10 +643,29 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="물" android:textColor="@color/text_secondary" android:textSize="11sp" />
-                    <TextView android:id="@+id/txtWaterConsumed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="0" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="g" android:textColor="@color/text_secondary" android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/txtWaterConsumed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/accent_blue"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="물 g"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
                 </LinearLayout>
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="45dp"
+                    android:background="@color/divider" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -661,10 +673,29 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="사료" android:textColor="@color/text_secondary" android:textSize="11sp" />
-                    <TextView android:id="@+id/txtFoodConsumed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="0" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="g" android:textColor="@color/text_secondary" android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/txtFoodConsumed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/accent_orange"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="사료 g"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
                 </LinearLayout>
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="45dp"
+                    android:background="@color/divider" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -672,10 +703,29 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="약 A" android:textColor="@color/text_secondary" android:textSize="11sp" />
-                    <TextView android:id="@+id/txtPillAConsumed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="0" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="개" android:textColor="@color/text_secondary" android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/txtPillAConsumed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/primary"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="약 A 개"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
                 </LinearLayout>
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="45dp"
+                    android:background="@color/divider" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -683,19 +733,33 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="약 B" android:textColor="@color/text_secondary" android:textSize="11sp" />
-                    <TextView android:id="@+id/txtPillBConsumed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="0" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="개" android:textColor="@color/text_secondary" android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/txtPillBConsumed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/primary"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="약 B 개"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 임시 빠른 제어: 개발자 화면으로 분리하기 전까지 기존 기능 유지 -->
+        <!-- 시연 예약 일정 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
-            android:text="빠른 장치 제어"
+            android:text="시연 예약 일정"
             android:textColor="@color/text_primary"
             android:textSize="19sp"
             android:textStyle="bold" />
@@ -704,9 +768,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:text="기존 기능 보존용입니다. 다음 단계에서 개발자 화면으로 이동합니다."
+            android:text="현재 설정값으로 3회 급식 시연을 진행합니다."
             android:textColor="@color/text_secondary"
-            android:textSize="11sp" />
+            android:textSize="12sp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -722,37 +786,205 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp">
+                android:padding="15dp">
+
+                <TextView
+                    android:id="@+id/txtPlan1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_soft_panel"
+                    android:padding="13dp"
+                    android:text="1회"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/txtPlan2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_soft_panel"
+                    android:padding="13dp"
+                    android:text="2회"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/txtPlan3"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_soft_panel"
+                    android:padding="13dp"
+                    android:text="3회"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 시연/점검용 빠른 제어 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:text="장치 빠른 제어"
+            android:textColor="@color/text_primary"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="시연·점검용 기능입니다. 생활 모드에서는 자동 제어를 사용합니다."
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="물 유지량"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:orientation="horizontal">
-                    <com.google.android.material.button.MaterialButton android:id="@+id/btnWaterUp" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:layout_margin="4dp" android:text="물 +10g" android:textAllCaps="false" android:textSize="12sp" app:cornerRadius="14dp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/btnWaterDown" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:layout_margin="4dp" android:text="물 -10g" android:textAllCaps="false" android:textSize="12sp" app:cornerRadius="14dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnWaterDown"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:text="- 10g"
+                        android:textAllCaps="false"
+                        android:textColor="@color/primary"
+                        app:cornerRadius="14dp"
+                        app:strokeColor="@color/divider" />
+
+                    <Space
+                        android:layout_width="8dp"
+                        android:layout_height="1dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnWaterUp"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:text="+ 10g"
+                        android:textAllCaps="false"
+                        android:textColor="@color/primary"
+                        app:cornerRadius="14dp"
+                        app:strokeColor="@color/divider" />
                 </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    android:text="덮개"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:orientation="horizontal">
-                    <com.google.android.material.button.MaterialButton android:id="@+id/btnCoverOpen" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:layout_margin="4dp" android:text="덮개 열기" android:textAllCaps="false" android:textSize="12sp" app:cornerRadius="14dp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/btnCoverClose" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:layout_margin="4dp" android:text="덮개 닫기" android:textAllCaps="false" android:textSize="12sp" app:cornerRadius="14dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCoverOpen"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:text="열기"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_primary"
+                        app:cornerRadius="14dp"
+                        app:strokeColor="@color/divider" />
+
+                    <Space
+                        android:layout_width="8dp"
+                        android:layout_height="1dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCoverClose"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:text="닫기"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_primary"
+                        app:cornerRadius="14dp"
+                        app:strokeColor="@color/divider" />
                 </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:orientation="horizontal">
-                    <com.google.android.material.button.MaterialButton android:id="@+id/btnRefill" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:layout_margin="4dp" android:text="보충 완료" android:textAllCaps="false" android:textSize="12sp" app:cornerRadius="14dp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/btnReset" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:layout_margin="4dp" android:text="초기화" android:textAllCaps="false" android:textColor="@color/danger" android:textSize="12sp" app:cornerRadius="14dp" app:strokeColor="@color/danger" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRefill"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:text="보충 완료"
+                        android:textAllCaps="false"
+                        android:textColor="@color/primary"
+                        app:cornerRadius="14dp"
+                        app:strokeColor="@color/divider" />
+
+                    <Space
+                        android:layout_width="8dp"
+                        android:layout_height="1dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnReset"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:text="초기화"
+                        android:textAllCaps="false"
+                        android:textColor="@color/danger"
+                        app:cornerRadius="14dp"
+                        app:strokeColor="@color/danger_soft" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 하단 이동 -->
+        <!-- 하단 주요 메뉴 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
+            android:layout_marginTop="18dp"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
@@ -761,22 +993,26 @@
                 android:layout_width="0dp"
                 android:layout_height="52dp"
                 android:layout_weight="1"
-                android:layout_marginEnd="6dp"
                 android:text="기록 보기"
                 android:textAllCaps="false"
                 android:textColor="@color/primary"
+                android:textStyle="bold"
                 app:cornerRadius="16dp"
                 app:strokeColor="@color/primary" />
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="1dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSettings"
                 android:layout_width="0dp"
                 android:layout_height="52dp"
                 android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:text="설정"
+                android:text="급식 설정"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
+                android:textStyle="bold"
                 app:backgroundTint="@color/primary"
                 app:cornerRadius="16dp" />
         </LinearLayout>
