@@ -20,7 +20,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.dogfood.databinding.ActivityMainBinding
 import com.example.dogfood.databinding.DialogDeveloperBinding
-import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -389,16 +388,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun appendRecord() {
-        val now = LocalDateTime.now()
-        val line = buildString {
-            append(now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")))
-            append(" | 물추정섭취량=").append(dogState.waterConsumed).append("g")
-            append(" | 사료추정섭취량=").append(foodConsumedTotal).append("g")
-            append(" | ").append(Prefs.pillAName(this)).append("배출추정=").append(dogState.pillAConsumed).append("ea")
-            append(" | ").append(Prefs.pillBName(this)).append("배출추정=").append(dogState.pillBConsumed).append("ea")
-            append('\n')
-        }
-        File(filesDir, "애견급식기.txt").appendText(line, Charsets.UTF_8)
+        RecordStore.appendDemoRecord(
+            context = this,
+            waterEstimatedGram = dogState.waterConsumed,
+            foodEstimatedGram = foodConsumedTotal,
+            pillAEstimatedCount = dogState.pillAConsumed,
+            pillBEstimatedCount = dogState.pillBConsumed,
+            pillAName = Prefs.pillAName(this),
+            pillBName = Prefs.pillBName(this),
+        )
     }
 
     private fun sameMinute(a: LocalDateTime, b: LocalDateTime): Boolean =
