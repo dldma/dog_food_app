@@ -17,6 +17,9 @@
         android:theme="@style/Theme.DogFood">
 
         <activity
+            android:name=".LifeScheduleActivity"
+            android:exported="false" />
+        <activity
             android:name=".RecordActivity"
             android:exported="false" />
         <activity

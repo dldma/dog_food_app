@@ -1,5 +1,7 @@
 package com.example.dogfood
 
+import java.time.LocalTime
+
 data class DogState(
     val startMode: Int = 0,
     val waterSet: Int = 0,
@@ -19,6 +21,7 @@ data class DogState(
 
 object DogFoodProtocol {
     const val PACKET_LENGTH = 18
+    const val MAX_DAILY_SCHEDULES = 10
 
     // App Inventor 블록에서 확인된 수동 명령
     const val CMD_WATER_UP = "o"
@@ -39,6 +42,11 @@ object DogFoodProtocol {
 
     // 실제 ATmega128 코드의 모드 토글 명령
     const val CMD_START = "k"
+
+    // Stage 5 생활모드 명령
+    const val CMD_DAILY_CLEAR = "R\n"
+    const val CMD_DAILY_ENABLE = "E\n"
+    const val CMD_DAILY_PAUSE = "X\n"
 
     fun parse(packet: String): DogState? {
         if (packet.length != PACKET_LENGTH || packet[0] != 'D') return null
@@ -62,4 +70,16 @@ object DogFoodProtocol {
 
     fun feedingCommand(foodGram: Int, pillA: Int, pillB: Int): String =
         "wx${foodGram}y${pillA}z${pillB}\n"
+
+    fun clockCommand(time: LocalTime = LocalTime.now()): String =
+        "T%02d%02d%02d\n".format(time.hour, time.minute, time.second)
+
+    fun dailyScheduleCommand(schedule: DailySchedule): String =
+        "S%02d%02dx%dy%dz%d\n".format(
+            schedule.hour,
+            schedule.minute,
+            schedule.foodGram,
+            schedule.pillA,
+            schedule.pillB,
+        )
 }

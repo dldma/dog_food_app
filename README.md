@@ -1,3 +1,7 @@
+# Dog Food - 졸업작품 Android 앱
+
+현재 기준은 **Stage 2 보호자용 홈 UI**입니다. 기존 App Inventor 동작을 Android/Kotlin으로 유지하면서 단계적으로 생활/시연/개발자 모드를 통합합니다.
+
 # Dog Food - App Inventor 블록 리팩터링 버전
 
 업로드된 MIT App Inventor 블록 스크린샷을 기준으로 Android/Kotlin 코드로 다시 구성한 프로젝트입니다.
@@ -49,3 +53,9 @@
 5. 앱 실행 → `블루투스 연결` → 페어링 기기 선택
 
 Android 12 이상에서는 앱 최초 실행 시 Bluetooth 권한을 허용해야 합니다.
+
+## Stage 5
+
+생활 모드를 추가했습니다. 사용자가 매일 반복할 급식 예약을 최대 10개까지 저장할 수 있으며,
+Bluetooth 연결 시 휴대폰 현재 시간과 저장된 예약을 Stage 5 ATmega 펌웨어로 자동 동기화합니다.
+RTC가 없으므로 장치 전원 재인가 후 앱과 한 번 연결해야 합니다.

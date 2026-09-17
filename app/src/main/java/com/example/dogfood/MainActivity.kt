@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var sequenceRunning = false
     private var foodConsumedTotal = 0
     private var hasReceivedPacket = false
+    private var lastLifeScheduleSignature = ""
 
     private var developerDialog: Dialog? = null
     private var developerBinding: DialogDeveloperBinding? = null
@@ -80,15 +81,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     binding.txtConnection.setBackgroundResource(
                         if (connected) R.drawable.bg_chip_green else R.drawable.bg_chip_neutral
                     )
-                    if (connected) toast("$message 연결 완료")
+                    if (connected) {
+                        toast("$message 연결 완료")
+                        lastLifeScheduleSignature = ""
+                        handler.postDelayed({ syncLifeSchedulesToDevice(showToast = false) }, 700L)
+                    }
                     refreshOverallStatus()
                     refreshDeveloperConnection()
+                    refreshLifeScheduleCard()
                 }
             },
         )
 
         bindButtons()
         refreshHeader()
+        refreshLifeScheduleCard()
         createInitialPlans()
         renderPlans()
         applyDogState(dogState)
@@ -98,9 +105,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onResume() {
         super.onResume()
         refreshHeader()
+        refreshLifeScheduleCard()
         if (!sequenceRunning) {
             createInitialPlans()
             renderPlans()
+        }
+        if (::bluetooth.isInitialized && bluetooth.isConnected()) {
+            val signature = lifeScheduleSignature()
+            if (signature != lastLifeScheduleSignature) {
+                handler.postDelayed({ syncLifeSchedulesToDevice(showToast = false) }, 350L)
+            }
         }
     }
 
@@ -126,6 +140,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         }
 
+        btnLifeSchedule.setOnClickListener {
+            startActivity(Intent(this@MainActivity, LifeScheduleActivity::class.java))
+        }
+        btnLifeSync.setOnClickListener {
+            syncLifeSchedulesToDevice(showToast = true)
+        }
         btnSettings.setOnClickListener {
             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
         }
@@ -138,7 +158,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun refreshHeader() {
         val name = Prefs.dogName(this).trim()
         binding.txtDogName.text = if (name.isBlank()) "반려견 케어 스테이션" else "$name 케어 스테이션"
-        binding.txtMode.text = "시연 모드"
+        binding.txtMode.text = if (Prefs.lifeEnabled(this)) "생활 모드 ON" else "통합 모드"
     }
 
     private fun sendManual(command: String) {
@@ -260,8 +280,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         styleStartButton(active = true)
         renderPlans()
 
+        // 시연 중 생활 예약이 같은 시각에 겹치지 않도록 예약 실행만 잠시 중지합니다.
+        bluetooth.send(DogFoodProtocol.CMD_DAILY_PAUSE)
         // 'k'는 토글 명령이므로 이미 자동 모드라면 다시 보내지 않는다.
-        if (dogState.startMode == 0) bluetooth.send(DogFoodProtocol.CMD_START)
+        if (dogState.startMode == 0) {
+            handler.postDelayed({
+                if (bluetooth.isConnected()) bluetooth.send(DogFoodProtocol.CMD_START)
+            }, 250L)
+        }
         toast("시연 예약 3건을 시작했습니다.")
     }
 
@@ -343,7 +369,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             it.measureAt = null
         }
         styleStartButton(active = false)
-        if (sendReset && bluetooth.isConnected()) bluetooth.send(DogFoodProtocol.CMD_RESET)
+        if (sendReset && bluetooth.isConnected()) {
+            bluetooth.send(DogFoodProtocol.CMD_RESET)
+            // j 명령은 생활 예약도 중지하므로, 사용자가 생활 모드를 켜둔 경우 다시 동기화합니다.
+            if (Prefs.lifeEnabled(this)) {
+                handler.postDelayed({ syncLifeSchedulesToDevice(showToast = false) }, 800L)
+            }
+        }
         renderPlans()
     }
 
@@ -398,7 +430,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         txtPillBConsumed.text = state.pillBConsumed.toString()
 
         refreshDeveloperPanel(state)
-        styleStartButton(active = state.startMode != 0 || sequenceRunning)
+        styleStartButton(active = sequenceRunning)
         styleCoverButtons(state.coverMode)
         refreshOverallStatus()
     }
@@ -464,8 +496,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun updateNextFeedingCard() {
         if (!sequenceRunning) {
-            binding.txtNextFeed.text = "시연 급식 대기 중"
-            binding.txtNextFeedDetail.text = "시연 급식 시작을 눌러 시간 간격·사료량·약 A/B 개수를 설정하세요."
+            val daily = Prefs.lifeSchedules(this)
+            if (Prefs.lifeEnabled(this) && daily.isNotEmpty()) {
+                val now = java.time.LocalTime.now()
+                val currentMinute = now.hour * 60 + now.minute
+                val nextToday = daily.firstOrNull { it.minuteOfDay > currentMinute }
+                val next = nextToday ?: daily.first()
+                val dayText = if (nextToday != null) "오늘" else "내일"
+                binding.txtNextFeed.text = "생활 예약 · $dayText ${next.timeText()}"
+                binding.txtNextFeedDetail.text = "사료 ${next.foodGram}g  ·  약 A ${next.pillA}개  ·  약 B ${next.pillB}개"
+            } else {
+                binding.txtNextFeed.text = "시연 급식 대기 중"
+                binding.txtNextFeedDetail.text = "시연 급식 시작을 눌러 시간 간격·사료량·약 A/B 개수를 설정하세요."
+            }
             return
         }
 
@@ -476,6 +519,89 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         } else {
             binding.txtNextFeed.text = "${next.time.format(DateTimeFormatter.ofPattern("HH:mm"))} · ${next.index}회차"
             binding.txtNextFeedDetail.text = "사료 ${next.foodGram}g  ·  약 A ${next.pillA}개  ·  약 B ${next.pillB}개"
+        }
+    }
+
+    private fun refreshLifeScheduleCard() {
+        val schedules = Prefs.lifeSchedules(this)
+        val enabled = Prefs.lifeEnabled(this)
+        val lastSync = Prefs.lastDeviceSync(this)
+
+        binding.txtLifeStatus.text = if (enabled) "생활 모드 ON" else "생활 모드 OFF"
+        binding.txtLifeBadge.text = if (enabled) "ON" else "OFF"
+        binding.txtLifeBadge.setBackgroundResource(
+            if (enabled) R.drawable.bg_chip_green else R.drawable.bg_chip_neutral
+        )
+        binding.txtLifeBadge.setTextColor(
+            color(if (enabled) R.color.accent_green else R.color.text_secondary)
+        )
+
+        binding.txtLifeSummary.text = when {
+            schedules.isEmpty() -> "등록된 예약이 없습니다. 예약 관리에서 매일 반복할 시간을 추가해주세요."
+            enabled -> "매일 ${schedules.size}회 자동 급식 · ${schedules.joinToString(" · ") { it.timeText() }}"
+            else -> "예약 ${schedules.size}개 저장됨 · 현재는 실행 중지 상태"
+        }
+
+        binding.txtLifeSync.text = when {
+            !bluetooth.isConnected() -> "장치 연결 시 휴대폰 현재 시간과 저장된 예약을 자동 동기화합니다."
+            lastSync.isBlank() -> "장치 연결됨 · 예약 동기화 준비 중"
+            else -> "마지막 장치 전송 · $lastSync"
+        }
+
+        updateNextFeedingCard()
+    }
+
+    private fun lifeScheduleSignature(): String {
+        val schedules = Prefs.lifeSchedules(this)
+        return buildString {
+            append(Prefs.lifeEnabled(this))
+            schedules.forEach {
+                append('|').append(it.hour).append(':').append(it.minute)
+                    .append(',').append(it.foodGram)
+                    .append(',').append(it.pillA)
+                    .append(',').append(it.pillB)
+            }
+        }
+    }
+
+    private fun syncLifeSchedulesToDevice(showToast: Boolean) {
+        if (!bluetooth.isConnected()) {
+            if (showToast) toast("먼저 장치를 블루투스로 연결해주세요.")
+            return
+        }
+
+        val schedules = Prefs.lifeSchedules(this).take(DogFoodProtocol.MAX_DAILY_SCHEDULES)
+        val enabled = Prefs.lifeEnabled(this)
+        if (enabled && schedules.isEmpty()) {
+            if (showToast) toast("생활 모드 예약을 1개 이상 추가해주세요.")
+            return
+        }
+
+        val commands = buildList {
+            add(DogFoodProtocol.clockCommand())
+            add(DogFoodProtocol.CMD_DAILY_CLEAR)
+            schedules.forEach { add(DogFoodProtocol.dailyScheduleCommand(it)) }
+            add(if (enabled) DogFoodProtocol.CMD_DAILY_ENABLE else DogFoodProtocol.CMD_DAILY_PAUSE)
+        }
+
+        commands.forEachIndexed { index, command ->
+            handler.postDelayed({
+                if (!bluetooth.isConnected()) return@postDelayed
+                bluetooth.send(command)
+
+                if (index == commands.lastIndex) {
+                    val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MM/dd HH:mm:ss"))
+                    Prefs.setLastDeviceSync(this, stamp)
+                    lastLifeScheduleSignature = lifeScheduleSignature()
+                    refreshLifeScheduleCard()
+                    if (showToast) {
+                        toast(
+                            if (enabled) "현재 시간과 생활 예약 ${schedules.size}개를 장치로 전송했습니다."
+                            else "현재 시간을 맞추고 생활 예약 실행을 중지했습니다."
+                        )
+                    }
+                }
+            }, index * 250L)
         }
     }
 
