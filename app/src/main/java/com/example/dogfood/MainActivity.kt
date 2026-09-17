@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var developerDialog: Dialog? = null
     private var developerBinding: DialogDeveloperBinding? = null
     private val developerLog = ArrayDeque<String>()
+    private val activeDeveloperStopCommands = mutableSetOf<String>()
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -653,6 +654,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         dialog.setContentView(dialogBinding.root)
         dialog.setCancelable(true)
         dialog.setOnDismissListener {
+            stopActiveDeveloperMotors("개발자 도구 닫힘")
             developerBinding = null
             developerDialog = null
         }
@@ -677,6 +679,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         }
 
+        dialogBinding.btnDevQuickTest.setOnClickListener {
+            runQuickSimulationTest()
+        }
+
+        dialogBinding.btnDevEmergencyStop.setOnClickListener {
+            emergencyStopDeveloper("사용자 긴급 정지")
+        }
+
         dialogBinding.btnDevManualMode.setOnClickListener {
             if (!requireDeveloperConnection()) return@setOnClickListener
             if (dogState.startMode == 1) {
@@ -696,7 +706,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             )
         }
         dialogBinding.btnDevWaterStop.setOnClickListener {
-            sendDeveloper(DogFoodProtocol.CMD_WATER_MOTOR_OFF, "M1 물 펌프 정지")
+            stopDeveloperMotor(DogFoodProtocol.CMD_WATER_MOTOR_OFF, "M1 물 펌프 정지")
         }
 
         dialogBinding.btnDevFoodRun.setOnClickListener {
@@ -708,17 +718,27 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             )
         }
         dialogBinding.btnDevFoodStop.setOnClickListener {
-            sendDeveloper(DogFoodProtocol.CMD_FOOD_MOTOR_OFF, "M2 사료 모터 정지")
+            stopDeveloperMotor(DogFoodProtocol.CMD_FOOD_MOTOR_OFF, "M2 사료 모터 정지")
         }
 
         dialogBinding.btnDevCoverOpen.setOnClickListener {
-            sendDeveloper(DogFoodProtocol.CMD_COVER_OPEN, "M3 덮개 열기")
+            runTimedMotor(
+                onCommand = DogFoodProtocol.CMD_COVER_OPEN,
+                offCommand = DogFoodProtocol.CMD_COVER_STOP,
+                durationMs = 5000L,
+                label = "M3 덮개 열기",
+            )
         }
         dialogBinding.btnDevCoverClose.setOnClickListener {
-            sendDeveloper(DogFoodProtocol.CMD_COVER_CLOSE, "M3 덮개 닫기")
+            runTimedMotor(
+                onCommand = DogFoodProtocol.CMD_COVER_CLOSE,
+                offCommand = DogFoodProtocol.CMD_COVER_STOP,
+                durationMs = 5000L,
+                label = "M3 덮개 닫기",
+            )
         }
         dialogBinding.btnDevCoverStop.setOnClickListener {
-            sendDeveloper(DogFoodProtocol.CMD_COVER_STOP, "M3 덮개 정지")
+            stopDeveloperMotor(DogFoodProtocol.CMD_COVER_STOP, "M3 덮개 정지")
         }
 
         dialogBinding.btnDevPillA.setOnClickListener {
@@ -729,11 +749,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         dialogBinding.btnDevStopAll.setOnClickListener {
-            if (!requireDeveloperConnection()) return@setOnClickListener
-            sendCommand(DogFoodProtocol.CMD_FOOD_MOTOR_OFF)
-            sendCommand(DogFoodProtocol.CMD_WATER_MOTOR_OFF)
-            sendCommand(DogFoodProtocol.CMD_COVER_STOP)
-            appendDeveloperLog("전체 DC 모터 정지 · b / d / g")
+            emergencyStopDeveloper("전체 DC 모터 정지")
         }
 
         refreshDeveloperConnection()
@@ -812,14 +828,92 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         label: String,
     ) {
         if (!requireDeveloperConnection()) return
+        activeDeveloperStopCommands += offCommand
         sendCommand(onCommand)
         appendDeveloperLog("$label ON  →  '$onCommand'${if (simulationEnabled) " · SIM" else ""}")
         handler.postDelayed({
-            if (isDeviceReady()) {
+            if (activeDeveloperStopCommands.remove(offCommand) && isDeviceReady()) {
                 sendCommand(offCommand)
                 appendDeveloperLog("$label 자동 정지  →  '$offCommand'${if (simulationEnabled) " · SIM" else ""}")
             }
         }, durationMs)
+    }
+
+    private fun stopDeveloperMotor(offCommand: String, label: String) {
+        if (!requireDeveloperConnection()) return
+        activeDeveloperStopCommands.remove(offCommand)
+        sendCommand(offCommand)
+        appendDeveloperLog("$label  →  '$offCommand'${if (simulationEnabled) " · SIM" else ""}")
+    }
+
+    private fun emergencyStopDeveloper(reason: String) {
+        if (!isDeviceReady()) {
+            appendDeveloperLog("$reason · 장치/시뮬레이션 미연결")
+            return
+        }
+        activeDeveloperStopCommands.clear()
+        sendCommand(DogFoodProtocol.CMD_FOOD_MOTOR_OFF)
+        sendCommand(DogFoodProtocol.CMD_WATER_MOTOR_OFF)
+        sendCommand(DogFoodProtocol.CMD_COVER_STOP)
+        appendDeveloperLog("$reason · b / d / g")
+        toast("DC 모터 정지 명령을 전송했습니다.")
+    }
+
+    private fun stopActiveDeveloperMotors(reason: String) {
+        if (activeDeveloperStopCommands.isEmpty() || !isDeviceReady()) return
+        val commands = activeDeveloperStopCommands.toList()
+        activeDeveloperStopCommands.clear()
+        commands.forEach(::sendCommand)
+        appendDeveloperLog("$reason · 실행 중 모터 자동 정지")
+    }
+
+    private fun runQuickSimulationTest() {
+        if (bluetooth.isConnected()) {
+            toast("빠른 통합 테스트는 실제 장치 연결을 끊고 실행해주세요.")
+            return
+        }
+        if (!simulationEnabled) enableSimulation()
+
+        simulateCommand(DogFoodProtocol.CMD_WATER_MOTOR_ON)
+        simulateCommand(DogFoodProtocol.CMD_FOOD_MOTOR_ON)
+        simulateCommand(DogFoodProtocol.CMD_COVER_CLOSE)
+        simulateCommand(DogFoodProtocol.CMD_COVER_OPEN)
+        syncLifeSchedulesToDevice(showToast = false)
+
+        val now = LocalDateTime.now()
+        val schedule = Prefs.lifeSchedules(this).firstOrNull()
+        val foodGram = schedule?.foodGram ?: Prefs.defaultFoodGram(this)
+        val pillA = schedule?.pillA ?: 1
+        val pillB = schedule?.pillB ?: 1
+        val event = DeviceFeedEvent(
+            sequence = simEventSequence++,
+            hour = now.hour,
+            minute = now.minute,
+            foodGram = foodGram,
+            pillA = pillA,
+            pillB = pillB,
+        )
+        handleDeviceFeedEvent(event)
+
+        dogState = dogState.copy(
+            foodWeight = (foodGram * 20 / 100).coerceAtLeast(0),
+            pillACount = (dogState.pillACount - pillA).coerceAtLeast(0),
+            pillBCount = (dogState.pillBCount - pillB).coerceAtLeast(0),
+        )
+        applyDogState(dogState)
+        appendDeveloperLog("빠른 통합 테스트 완료 · 센서/UI/예약동기화/기록")
+        AlertDialog.Builder(this)
+            .setTitle("빠른 통합 테스트 완료")
+            .setMessage(
+                "장치 없이 다음 경로를 확인했습니다.\n\n" +
+                    "• 가상 센서값 갱신\n" +
+                    "• 물/사료/덮개 명령 처리\n" +
+                    "• 생활 예약 동기화 로직\n" +
+                    "• 생활 급식 실행 기록 저장\n\n" +
+                    "기록 보기에서 방금 생성된 생활 급식 기록을 확인할 수 있습니다."
+            )
+            .setPositiveButton("확인", null)
+            .show()
     }
 
     private fun runStepperFromInput(command: String, label: String) {
@@ -1012,6 +1106,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
     override fun onDestroy() {
+        stopActiveDeveloperMotors("앱 종료")
         handler.removeCallbacks(tick)
         developerDialog?.dismiss()
         bluetooth.shutdown()
