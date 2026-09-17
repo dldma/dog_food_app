@@ -24,6 +24,17 @@ object Prefs {
     fun pillB(context: Context, index: Int): Int =
         int(context, "pill_b_$index", listOf(1, 1, 2)[index - 1])
 
+
+    fun demoOffset(context: Context, index: Int): Int =
+        int(context, "demo_offset_$index", listOf(1, 4, 7)[index - 1])
+
+    fun setDemoOffset(context: Context, index: Int, minutesAfterNow: Int) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt("demo_offset_$index", minutesAfterNow)
+            .apply()
+    }
+
     fun setPlan(context: Context, index: Int, food: Int, pillA: Int, pillB: Int) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit()

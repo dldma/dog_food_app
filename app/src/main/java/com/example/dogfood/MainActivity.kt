@@ -113,7 +113,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         btnCoverOpen.setOnClickListener { sendManual(DogFoodProtocol.CMD_COVER_OPEN) }
         btnRefill.setOnClickListener { sendManual(DogFoodProtocol.CMD_REFILL_DONE) }
         btnReset.setOnClickListener { resetSequence(sendReset = true) }
-        btnStart.setOnClickListener { startDemoSequence() }
+        btnStart.setOnClickListener {
+            if (sequenceRunning) {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("시연을 중지할까요?")
+                    .setMessage("진행 중인 시연 예약을 취소하고 장치를 초기화합니다.")
+                    .setPositiveButton("중지") { _, _ -> resetSequence(sendReset = true) }
+                    .setNegativeButton("계속", null)
+                    .show()
+            } else {
+                showDemoScheduleDialog()
+            }
+        }
 
         btnSettings.setOnClickListener {
             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
@@ -135,23 +146,111 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         else toast("먼저 장치를 블루투스로 연결해주세요.")
     }
 
-    private fun startDemoSequence() {
+    private fun showDemoScheduleDialog() {
+        val dialogBinding = com.example.dogfood.databinding.DialogDemoScheduleBinding.inflate(layoutInflater)
+        val fieldsOffset = listOf(dialogBinding.edtOffset1, dialogBinding.edtOffset2, dialogBinding.edtOffset3)
+        val fieldsFood = listOf(dialogBinding.edtDemoFood1, dialogBinding.edtDemoFood2, dialogBinding.edtDemoFood3)
+        val fieldsA = listOf(dialogBinding.edtDemoPillA1, dialogBinding.edtDemoPillA2, dialogBinding.edtDemoPillA3)
+        val fieldsB = listOf(dialogBinding.edtDemoPillB1, dialogBinding.edtDemoPillB2, dialogBinding.edtDemoPillB3)
+
+        repeat(3) { i ->
+            val index = i + 1
+            fieldsOffset[i].setText(Prefs.demoOffset(this, index).toString())
+            fieldsFood[i].setText(Prefs.food(this, index).toString())
+            fieldsA[i].setText(Prefs.pillA(this, index).toString())
+            fieldsB[i].setText(Prefs.pillB(this, index).toString())
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogBinding.root)
+            .create()
+
+        dialogBinding.btnDemoCancel.setOnClickListener { dialog.dismiss() }
+        dialogBinding.btnDemoStart.setOnClickListener {
+            if (!bluetooth.isConnected()) {
+                toast("예약을 시작하려면 먼저 장치를 블루투스로 연결해주세요.")
+                return@setOnClickListener
+            }
+
+            val offsets = fieldsOffset.map { it.text.toString().trim().toIntOrNull() }
+            val foods = fieldsFood.map { it.text.toString().trim().toIntOrNull() }
+            val pillsA = fieldsA.map { it.text.toString().trim().toIntOrNull() }
+            val pillsB = fieldsB.map { it.text.toString().trim().toIntOrNull() }
+
+            if (offsets.any { it == null } || foods.any { it == null } || pillsA.any { it == null } || pillsB.any { it == null }) {
+                toast("모든 시연 예약 값을 숫자로 입력해주세요.")
+                return@setOnClickListener
+            }
+
+            val safeOffsets = offsets.filterNotNull()
+            val safeFoods = foods.filterNotNull()
+            val safeA = pillsA.filterNotNull()
+            val safeB = pillsB.filterNotNull()
+
+            if (safeOffsets.any { it !in 1..180 }) {
+                toast("시연 시간은 1~180분 후로 설정해주세요.")
+                return@setOnClickListener
+            }
+            if (safeOffsets[1] - safeOffsets[0] < 2 || safeOffsets[2] - safeOffsets[1] < 2) {
+                toast("각 급식 사이를 최소 2분 이상 띄워주세요.")
+                return@setOnClickListener
+            }
+            if (safeFoods.any { it !in 1..999 }) {
+                toast("사료량은 1~999g 범위로 입력해주세요.")
+                return@setOnClickListener
+            }
+            if (safeA.any { it !in 0..7 } || safeB.any { it !in 0..7 }) {
+                toast("약 개수는 각 회차당 0~7개로 입력해주세요.")
+                return@setOnClickListener
+            }
+
+            val availableA = if (hasReceivedPacket) dogState.pillACount else 7
+            val availableB = if (hasReceivedPacket) dogState.pillBCount else 7
+            if (safeA.sum() > availableA) {
+                toast("약 A 예약 총 ${safeA.sum()}개 · 현재 사용 가능 $availableA개입니다.")
+                return@setOnClickListener
+            }
+            if (safeB.sum() > availableB) {
+                toast("약 B 예약 총 ${safeB.sum()}개 · 현재 사용 가능 $availableB개입니다.")
+                return@setOnClickListener
+            }
+
+            repeat(3) { i ->
+                val index = i + 1
+                Prefs.setDemoOffset(this, index, safeOffsets[i])
+                Prefs.setPlan(this, index, safeFoods[i], safeA[i], safeB[i])
+            }
+
+            dialog.dismiss()
+            startDemoSequence(safeOffsets, safeFoods, safeA, safeB)
+        }
+
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.94f).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT,
+        )
+    }
+
+    private fun startDemoSequence(
+        offsets: List<Int>,
+        foods: List<Int>,
+        pillsA: List<Int>,
+        pillsB: List<Int>,
+    ) {
         if (!bluetooth.isConnected()) {
             toast("시연을 시작하려면 먼저 장치를 연결해주세요.")
             return
         }
 
         val now = LocalDateTime.now().withSecond(0).withNano(0)
-
-        // 기존 App Inventor 시연 흐름을 유지: 현재 시각 기준 +1분, +4분, +7분
-        val offsets = listOf(1L, 4L, 7L)
         plans = (1..3).map { index ->
             FeedingPlan(
                 index = index,
-                time = now.plusMinutes(offsets[index - 1]),
-                foodGram = Prefs.food(this, index),
-                pillA = Prefs.pillA(this, index),
-                pillB = Prefs.pillB(this, index),
+                time = now.plusMinutes(offsets[index - 1].toLong()),
+                foodGram = foods[index - 1],
+                pillA = pillsA[index - 1],
+                pillB = pillsB[index - 1],
             )
         }.toMutableList()
 
@@ -161,8 +260,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         styleStartButton(active = true)
         renderPlans()
 
-        bluetooth.send(DogFoodProtocol.CMD_START)
-        toast("시연 급식 예약을 시작했습니다.")
+        // 'k'는 토글 명령이므로 이미 자동 모드라면 다시 보내지 않는다.
+        if (dogState.startMode == 0) bluetooth.send(DogFoodProtocol.CMD_START)
+        toast("시연 예약 3건을 시작했습니다.")
     }
 
     private fun createInitialPlans() {
@@ -170,7 +270,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         plans = (1..3).map { index ->
             FeedingPlan(
                 index = index,
-                time = now,
+                time = now.plusMinutes(Prefs.demoOffset(this, index).toLong()),
                 foodGram = Prefs.food(this, index),
                 pillA = Prefs.pillA(this, index),
                 pillB = Prefs.pillB(this, index),
@@ -330,7 +430,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding.btnStart.backgroundTintList = ColorStateList.valueOf(
             color(if (active) R.color.danger else R.color.primary)
         )
-        binding.btnStart.text = if (active) "시연 진행 중 · 초기화로 중지" else "시연 급식 시작"
+        binding.btnStart.text = if (active) "시연 진행 중 · 눌러서 중지" else "시연 급식 설정 및 시작"
     }
 
     private fun styleCoverButtons(coverMode: Int) {
@@ -365,7 +465,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun updateNextFeedingCard() {
         if (!sequenceRunning) {
             binding.txtNextFeed.text = "시연 급식 대기 중"
-            binding.txtNextFeedDetail.text = "시작하면 현재 시각 기준 +1분, +4분, +7분으로 3회 예약됩니다."
+            binding.txtNextFeedDetail.text = "시연 급식 시작을 눌러 시간 간격·사료량·약 A/B 개수를 설정하세요."
             return
         }
 
