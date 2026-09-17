@@ -159,6 +159,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val name = Prefs.dogName(this).trim()
         binding.txtDogName.text = if (name.isBlank()) "반려견 케어 스테이션" else "$name 케어 스테이션"
         binding.txtMode.text = if (Prefs.lifeEnabled(this)) "생활 모드 ON" else "통합 모드"
+
+        binding.txtPillALabel.text = "${Prefs.pillAName(this)} 잔여"
+        binding.txtPillBLabel.text = "${Prefs.pillBName(this)} 잔여"
+        binding.txtPillAConsumedLabel.text = "${Prefs.pillAName(this)} 개"
+        binding.txtPillBConsumedLabel.text = "${Prefs.pillBName(this)} 개"
     }
 
     private fun sendManual(command: String) {
@@ -172,6 +177,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val fieldsFood = listOf(dialogBinding.edtDemoFood1, dialogBinding.edtDemoFood2, dialogBinding.edtDemoFood3)
         val fieldsA = listOf(dialogBinding.edtDemoPillA1, dialogBinding.edtDemoPillA2, dialogBinding.edtDemoPillA3)
         val fieldsB = listOf(dialogBinding.edtDemoPillB1, dialogBinding.edtDemoPillB2, dialogBinding.edtDemoPillB3)
+        val pillAName = Prefs.pillAName(this)
+        val pillBName = Prefs.pillBName(this)
+        fieldsA.forEach { it.hint = pillAName }
+        fieldsB.forEach { it.hint = pillBName }
 
         repeat(3) { i ->
             val index = i + 1
@@ -227,11 +236,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val availableA = if (hasReceivedPacket) dogState.pillACount else 7
             val availableB = if (hasReceivedPacket) dogState.pillBCount else 7
             if (safeA.sum() > availableA) {
-                toast("약 A 예약 총 ${safeA.sum()}개 · 현재 사용 가능 $availableA개입니다.")
+                toast("${Prefs.pillAName(this)} 예약 총 ${safeA.sum()}개 · 현재 사용 가능 $availableA개입니다.")
                 return@setOnClickListener
             }
             if (safeB.sum() > availableB) {
-                toast("약 B 예약 총 ${safeB.sum()}개 · 현재 사용 가능 $availableB개입니다.")
+                toast("${Prefs.pillBName(this)} 예약 총 ${safeB.sum()}개 · 현재 사용 가능 $availableB개입니다.")
                 return@setOnClickListener
             }
 
@@ -385,8 +394,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             append(now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")))
             append(" | 물추정섭취량=").append(dogState.waterConsumed).append("g")
             append(" | 사료추정섭취량=").append(foodConsumedTotal).append("g")
-            append(" | 알약A배출추정=").append(dogState.pillAConsumed).append("ea")
-            append(" | 알약B배출추정=").append(dogState.pillBConsumed).append("ea")
+            append(" | ").append(Prefs.pillAName(this)).append("배출추정=").append(dogState.pillAConsumed).append("ea")
+            append(" | ").append(Prefs.pillBName(this)).append("배출추정=").append(dogState.pillBConsumed).append("ea")
             append('\n')
         }
         File(filesDir, "애견급식기.txt").appendText(line, Charsets.UTF_8)
@@ -487,7 +496,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             rows[i].text = buildString {
                 append("${i + 1}회 · ${plan.time.format(dateFmt)} ${plan.time.format(timeFmt)}")
                 append("  ·  $mark")
-                append("\n사료 ${plan.foodGram}g  ·  약 A ${plan.pillA}개  ·  약 B ${plan.pillB}개")
+                append("\n사료 ${plan.foodGram}g  ·  ${Prefs.pillAName(this@MainActivity)} ${plan.pillA}개  ·  ${Prefs.pillBName(this@MainActivity)} ${plan.pillB}개")
             }
         }
 
@@ -504,10 +513,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val next = nextToday ?: daily.first()
                 val dayText = if (nextToday != null) "오늘" else "내일"
                 binding.txtNextFeed.text = "생활 예약 · $dayText ${next.timeText()}"
-                binding.txtNextFeedDetail.text = "사료 ${next.foodGram}g  ·  약 A ${next.pillA}개  ·  약 B ${next.pillB}개"
+                binding.txtNextFeedDetail.text = "사료 ${next.foodGram}g  ·  ${Prefs.pillAName(this)} ${next.pillA}개  ·  ${Prefs.pillBName(this)} ${next.pillB}개"
             } else {
                 binding.txtNextFeed.text = "시연 급식 대기 중"
-                binding.txtNextFeedDetail.text = "시연 급식 시작을 눌러 시간 간격·사료량·약 A/B 개수를 설정하세요."
+                binding.txtNextFeedDetail.text = "시연 급식 시작을 눌러 시간 간격·사료량·투약 개수를 설정하세요."
             }
             return
         }
@@ -518,7 +527,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             binding.txtNextFeedDetail.text = "센서 측정 및 기록 저장을 진행하고 있습니다."
         } else {
             binding.txtNextFeed.text = "${next.time.format(DateTimeFormatter.ofPattern("HH:mm"))} · ${next.index}회차"
-            binding.txtNextFeedDetail.text = "사료 ${next.foodGram}g  ·  약 A ${next.pillA}개  ·  약 B ${next.pillB}개"
+            binding.txtNextFeedDetail.text = "사료 ${next.foodGram}g  ·  ${Prefs.pillAName(this)} ${next.pillA}개  ·  ${Prefs.pillBName(this)} ${next.pillB}개"
         }
     }
 
@@ -674,10 +683,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         dialogBinding.btnDevPillA.setOnClickListener {
-            runStepperFromInput(DogFoodProtocol.CMD_PILL_A_STEP, "M4 약통 A")
+            runStepperFromInput(DogFoodProtocol.CMD_PILL_A_STEP, "M4 약통 A (${Prefs.pillAName(this)})")
         }
         dialogBinding.btnDevPillB.setOnClickListener {
-            runStepperFromInput(DogFoodProtocol.CMD_PILL_B_STEP, "M5 약통 B")
+            runStepperFromInput(DogFoodProtocol.CMD_PILL_B_STEP, "M5 약통 B (${Prefs.pillBName(this)})")
         }
 
         dialogBinding.btnDevStopAll.setOnClickListener {
@@ -712,7 +721,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             dev.txtDevWaterSensor.text = "물통 감지 센서  ·  수신 대기"
             dev.txtDevFoodSensor.text = "사료 감지 센서  ·  수신 대기"
             dev.txtDevCover.text = "덮개 상태  ·  수신 대기"
-            dev.txtDevPills.text = "약통 A --개  ·  약통 B --개"
+            dev.txtDevPills.text = "${Prefs.pillAName(this)} --개  ·  ${Prefs.pillBName(this)} --개"
             dev.txtDevAutoMode.text = "제어 모드  ·  수신 대기"
             return
         }
@@ -725,7 +734,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (state.foodLow == 0) "사료 감지 센서  ·  사료 부족" else "사료 감지 센서  ·  정상"
         dev.txtDevCover.text =
             if (state.coverMode == 0) "덮개 상태  ·  열림" else "덮개 상태  ·  닫힘"
-        dev.txtDevPills.text = "약통 A ${state.pillACount}개  ·  약통 B ${state.pillBCount}개"
+        dev.txtDevPills.text = "${Prefs.pillAName(this)} ${state.pillACount}개  ·  ${Prefs.pillBName(this)} ${state.pillBCount}개"
         dev.txtDevAutoMode.text =
             if (state.startMode == 1) "제어 모드  ·  자동" else "제어 모드  ·  수동"
 

@@ -47,6 +47,7 @@
         android:orientation="horizontal">
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutLifePillA"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -61,6 +62,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutLifePillB"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"

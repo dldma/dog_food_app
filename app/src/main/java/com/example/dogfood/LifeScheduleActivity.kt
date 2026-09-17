@@ -49,7 +49,9 @@ class LifeScheduleActivity : AppCompatActivity() {
         schedules.sortedBy { it.minuteOfDay }.forEach { schedule ->
             val row = ItemDailyScheduleBinding.inflate(LayoutInflater.from(this), binding.scheduleContainer, false)
             row.txtScheduleTime.text = schedule.timeText()
-            row.txtScheduleDetail.text = "사료 ${schedule.foodGram}g  ·  약 A ${schedule.pillA}개  ·  약 B ${schedule.pillB}개"
+            val pillAName = Prefs.pillAName(this)
+            val pillBName = Prefs.pillBName(this)
+            row.txtScheduleDetail.text = "사료 ${schedule.foodGram}g  ·  $pillAName ${schedule.pillA}개  ·  $pillBName ${schedule.pillB}개"
             row.btnScheduleEdit.setOnClickListener { showScheduleEditor(schedule) }
             row.btnScheduleDelete.setOnClickListener {
                 AlertDialog.Builder(this)
@@ -76,9 +78,11 @@ class LifeScheduleActivity : AppCompatActivity() {
         }
 
         refreshTime()
-        dialogBinding.edtLifeFood.setText((existing?.foodGram ?: 65).toString())
+        dialogBinding.edtLifeFood.setText((existing?.foodGram ?: Prefs.defaultFoodGram(this)).toString())
         dialogBinding.edtLifePillA.setText((existing?.pillA ?: 0).toString())
         dialogBinding.edtLifePillB.setText((existing?.pillB ?: 0).toString())
+        dialogBinding.layoutLifePillA.hint = "${Prefs.pillAName(this)} 개수"
+        dialogBinding.layoutLifePillB.hint = "${Prefs.pillBName(this)} 개수"
 
         dialogBinding.btnPickTime.setOnClickListener {
             TimePickerDialog(
@@ -112,7 +116,7 @@ class LifeScheduleActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
                 if (pillA == null || pillA !in 0..7 || pillB == null || pillB !in 0..7) {
-                    toast("약 A/B는 각각 0~7개로 입력해주세요.")
+                    toast("${Prefs.pillAName(this)}/${Prefs.pillBName(this)}는 각각 0~7개로 입력해주세요.")
                     return@setOnClickListener
                 }
 
@@ -153,7 +157,7 @@ class LifeScheduleActivity : AppCompatActivity() {
                 .setTitle("약통 용량을 확인해주세요")
                 .setMessage(
                     "하루 예약 합계가 약통의 현재 기준 용량 7개를 넘습니다.\n\n" +
-                        "약 A: ${totalA}개 / 약 B: ${totalB}개\n\n" +
+                        "${Prefs.pillAName(this)}: ${totalA}개 / ${Prefs.pillBName(this)}: ${totalB}개\n\n" +
                         "중간에 보충하지 않으면 일부 투약이 불가능할 수 있습니다. 그래도 저장할까요?"
                 )
                 .setPositiveButton("저장") { _, _ -> persist(enabled) }
