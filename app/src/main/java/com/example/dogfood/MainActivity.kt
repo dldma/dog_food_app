@@ -1,6 +1,7 @@
 package com.example.dogfood
 
 import android.Manifest
+import android.app.Dialog
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,6 +10,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Window
+import android.view.WindowManager
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,6 +19,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.dogfood.databinding.ActivityMainBinding
+import com.example.dogfood.databinding.DialogDeveloperBinding
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -34,6 +38,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var sequenceRunning = false
     private var foodConsumedTotal = 0
     private var hasReceivedPacket = false
+
+    private var developerDialog: Dialog? = null
+    private var developerBinding: DialogDeveloperBinding? = null
+    private val developerLog = ArrayDeque<String>()
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -74,6 +82,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     )
                     if (connected) toast("$message 연결 완료")
                     refreshOverallStatus()
+                    refreshDeveloperConnection()
                 }
             },
         )
@@ -112,6 +121,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         btnRecord.setOnClickListener {
             startActivity(Intent(this@MainActivity, RecordActivity::class.java))
         }
+        btnDeveloper.setOnClickListener { showDeveloperPanel() }
     }
 
     private fun refreshHeader() {
@@ -287,6 +297,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         txtPillAConsumed.text = state.pillAConsumed.toString()
         txtPillBConsumed.text = state.pillBConsumed.toString()
 
+        refreshDeveloperPanel(state)
         styleStartButton(active = state.startMode != 0 || sequenceRunning)
         styleCoverButtons(state.coverMode)
         refreshOverallStatus()
@@ -368,6 +379,199 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    private fun showDeveloperPanel() {
+        if (developerDialog?.isShowing == true) return
+
+        val dialogBinding = DialogDeveloperBinding.inflate(layoutInflater)
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(dialogBinding.root)
+        dialog.setCancelable(true)
+        dialog.setOnDismissListener {
+            developerBinding = null
+            developerDialog = null
+        }
+        dialog.show()
+        dialog.window?.setLayout(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+        )
+
+        developerDialog = dialog
+        developerBinding = dialogBinding
+
+        dialogBinding.btnDevClose.setOnClickListener { dialog.dismiss() }
+        dialogBinding.btnDevBluetooth.setOnClickListener { ensureBluetoothPermissionAndShowDevices() }
+
+        dialogBinding.btnDevManualMode.setOnClickListener {
+            if (!requireDeveloperConnection()) return@setOnClickListener
+            if (dogState.startMode == 1) {
+                sendDeveloper(DogFoodProtocol.CMD_START, "자동 모드 OFF 요청")
+            } else {
+                toast("이미 수동 모드입니다.")
+                appendDeveloperLog("수동 모드 확인")
+            }
+        }
+
+        dialogBinding.btnDevWaterRun.setOnClickListener {
+            runTimedMotor(
+                onCommand = DogFoodProtocol.CMD_WATER_MOTOR_ON,
+                offCommand = DogFoodProtocol.CMD_WATER_MOTOR_OFF,
+                durationMs = 1500L,
+                label = "M1 물 펌프",
+            )
+        }
+        dialogBinding.btnDevWaterStop.setOnClickListener {
+            sendDeveloper(DogFoodProtocol.CMD_WATER_MOTOR_OFF, "M1 물 펌프 정지")
+        }
+
+        dialogBinding.btnDevFoodRun.setOnClickListener {
+            runTimedMotor(
+                onCommand = DogFoodProtocol.CMD_FOOD_MOTOR_ON,
+                offCommand = DogFoodProtocol.CMD_FOOD_MOTOR_OFF,
+                durationMs = 2000L,
+                label = "M2 사료 모터",
+            )
+        }
+        dialogBinding.btnDevFoodStop.setOnClickListener {
+            sendDeveloper(DogFoodProtocol.CMD_FOOD_MOTOR_OFF, "M2 사료 모터 정지")
+        }
+
+        dialogBinding.btnDevCoverOpen.setOnClickListener {
+            sendDeveloper(DogFoodProtocol.CMD_COVER_OPEN, "M3 덮개 열기")
+        }
+        dialogBinding.btnDevCoverClose.setOnClickListener {
+            sendDeveloper(DogFoodProtocol.CMD_COVER_CLOSE, "M3 덮개 닫기")
+        }
+        dialogBinding.btnDevCoverStop.setOnClickListener {
+            sendDeveloper(DogFoodProtocol.CMD_COVER_STOP, "M3 덮개 정지")
+        }
+
+        dialogBinding.btnDevPillA.setOnClickListener {
+            runStepperFromInput(DogFoodProtocol.CMD_PILL_A_STEP, "M4 약통 A")
+        }
+        dialogBinding.btnDevPillB.setOnClickListener {
+            runStepperFromInput(DogFoodProtocol.CMD_PILL_B_STEP, "M5 약통 B")
+        }
+
+        dialogBinding.btnDevStopAll.setOnClickListener {
+            if (!requireDeveloperConnection()) return@setOnClickListener
+            bluetooth.send(DogFoodProtocol.CMD_FOOD_MOTOR_OFF)
+            bluetooth.send(DogFoodProtocol.CMD_WATER_MOTOR_OFF)
+            bluetooth.send(DogFoodProtocol.CMD_COVER_STOP)
+            appendDeveloperLog("전체 DC 모터 정지 · b / d / g")
+        }
+
+        refreshDeveloperConnection()
+        refreshDeveloperPanel(dogState)
+        appendDeveloperLog("개발자 도구 열림")
+    }
+
+    private fun refreshDeveloperConnection() {
+        val dev = developerBinding ?: return
+        val connected = bluetooth.isConnected()
+        dev.txtDevConnection.text = if (connected) "● 연결됨" else "● 연결 안됨"
+        dev.txtDevConnection.setTextColor(
+            color(if (connected) R.color.accent_green else R.color.text_secondary)
+        )
+        dev.btnDevBluetooth.text = if (connected) "장치 변경" else "장치 연결"
+    }
+
+    private fun refreshDeveloperPanel(state: DogState) {
+        val dev = developerBinding ?: return
+
+        if (!hasReceivedPacket) {
+            dev.txtDevWaterWeight.text = "물 로드셀  ·  수신 대기"
+            dev.txtDevFoodWeight.text = "사료 로드셀  ·  수신 대기"
+            dev.txtDevWaterSensor.text = "물통 감지 센서  ·  수신 대기"
+            dev.txtDevFoodSensor.text = "사료 감지 센서  ·  수신 대기"
+            dev.txtDevCover.text = "덮개 상태  ·  수신 대기"
+            dev.txtDevPills.text = "약통 A --개  ·  약통 B --개"
+            dev.txtDevAutoMode.text = "제어 모드  ·  수신 대기"
+            return
+        }
+
+        dev.txtDevWaterWeight.text = "물 로드셀  ·  ${state.waterWeight} g"
+        dev.txtDevFoodWeight.text = "사료 로드셀  ·  ${state.foodWeight} g"
+        dev.txtDevWaterSensor.text =
+            if (state.waterLow == 0) "물통 감지 센서  ·  물 부족" else "물통 감지 센서  ·  정상"
+        dev.txtDevFoodSensor.text =
+            if (state.foodLow == 0) "사료 감지 센서  ·  사료 부족" else "사료 감지 센서  ·  정상"
+        dev.txtDevCover.text =
+            if (state.coverMode == 0) "덮개 상태  ·  열림" else "덮개 상태  ·  닫힘"
+        dev.txtDevPills.text = "약통 A ${state.pillACount}개  ·  약통 B ${state.pillBCount}개"
+        dev.txtDevAutoMode.text =
+            if (state.startMode == 1) "제어 모드  ·  자동" else "제어 모드  ·  수동"
+
+        dev.txtDevModeWarning.text = if (state.startMode == 1) {
+            "자동 모드 ON · 수동 테스트 전 아래 버튼으로 자동 모드를 꺼주세요."
+        } else {
+            "수동 모드 · 모터 단독 테스트 가능"
+        }
+        dev.txtDevModeWarning.setTextColor(
+            color(if (state.startMode == 1) R.color.warning else R.color.accent_green)
+        )
+    }
+
+    private fun requireDeveloperConnection(): Boolean {
+        if (bluetooth.isConnected()) return true
+        toast("먼저 장치를 블루투스로 연결해주세요.")
+        appendDeveloperLog("전송 실패 · 블루투스 연결 필요")
+        return false
+    }
+
+    private fun sendDeveloper(command: String, label: String) {
+        if (!requireDeveloperConnection()) return
+        bluetooth.send(command)
+        appendDeveloperLog("$label  →  '$command'")
+    }
+
+    private fun runTimedMotor(
+        onCommand: String,
+        offCommand: String,
+        durationMs: Long,
+        label: String,
+    ) {
+        if (!requireDeveloperConnection()) return
+        bluetooth.send(onCommand)
+        appendDeveloperLog("$label ON  →  '$onCommand'")
+        handler.postDelayed({
+            if (bluetooth.isConnected()) {
+                bluetooth.send(offCommand)
+                appendDeveloperLog("$label 자동 정지  →  '$offCommand'")
+            }
+        }, durationMs)
+    }
+
+    private fun runStepperFromInput(command: String, label: String) {
+        if (!requireDeveloperConnection()) return
+        val angle = developerBinding?.edtStepAngle?.text?.toString()?.trim()?.toIntOrNull()
+        if (angle == null || angle !in 45..360 || angle % 45 != 0) {
+            toast("각도는 45~360 사이의 45도 배수로 입력해주세요.")
+            return
+        }
+
+        val repeats = angle / 45
+        appendDeveloperLog("$label ${angle}° 시작 · 45° × $repeats")
+
+        // ATmega의 45° 함수가 약 1초 동안 블로킹되므로 명령이 덮어쓰이지 않게 간격을 둡니다.
+        repeat(repeats) { index ->
+            handler.postDelayed({
+                if (bluetooth.isConnected()) {
+                    bluetooth.send(command)
+                    appendDeveloperLog("$label ${index + 1}/$repeats  →  '$command'")
+                }
+            }, index * 1300L)
+        }
+    }
+
+    private fun appendDeveloperLog(message: String) {
+        val stamp = java.time.LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+        developerLog.addFirst("[$stamp] $message")
+        while (developerLog.size > 8) developerLog.removeLast()
+        developerBinding?.txtDevLog?.text = developerLog.joinToString("\n")
+    }
+
     private fun speak(text: String) {
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "dog-food")
     }
@@ -422,6 +626,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onDestroy() {
         handler.removeCallbacks(tick)
+        developerDialog?.dismiss()
         bluetooth.shutdown()
         tts.stop()
         tts.shutdown()

@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/app_bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="18dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="개발자 도구"
+                    android:textColor="@color/text_primary"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="센서 확인 · 모터 단독 테스트"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDevClose"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="닫기"
+                android:textAllCaps="false"
+                android:textColor="@color/text_primary"
+                app:cornerRadius="14dp"
+                app:strokeColor="@color/divider" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="장치 연결"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/txtDevConnection"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="● 연결 안됨"
+                        android:textColor="@color/text_secondary"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDevBluetooth"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:text="장치 연결"
+                        android:textAllCaps="false"
+                        android:textColor="@color/white"
+                        app:backgroundTint="@color/primary"
+                        app:cornerRadius="14dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txtDevModeWarning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_round_orange_soft"
+                    android:padding="10dp"
+                    android:text="자동 모드가 켜져 있으면 수동 모터 테스트와 충돌할 수 있습니다."
+                    android:textColor="@color/warning"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDevManualMode"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:layout_marginTop="10dp"
+                    android:text="자동 모드 끄기 · 수동 테스트 준비"
+                    android:textAllCaps="false"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="14dp"
+                    app:strokeColor="@color/primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="실시간 센서"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/txtDevWaterWeight"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="물 로드셀  ·  -- g"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="역할: 물그릇의 현재 무게 측정"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="@color/divider" />
+
+                <TextView
+                    android:id="@+id/txtDevFoodWeight"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="사료 로드셀  ·  -- g"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="역할: 사료그릇의 현재 무게 측정"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="@color/divider" />
+
+                <TextView
+                    android:id="@+id/txtDevWaterSensor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="물통 감지 센서  ·  --"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="역할: 물 공급 가능 여부 감지"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="@color/divider" />
+
+                <TextView
+                    android:id="@+id/txtDevFoodSensor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="사료 감지 센서  ·  --"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="역할: 사료통 잔량 부족 여부 감지"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="@color/divider" />
+
+                <TextView
+                    android:id="@+id/txtDevCover"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="덮개 상태  ·  --"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtDevPills"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="약통 A --개  ·  약통 B --개"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtDevAutoMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="제어 모드  ·  --"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="모터 단독 테스트"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="현재 ATmega 펌웨어에 이미 있는 명령만 사용합니다."
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="M1 · 물 펌프 모터" android:textColor="@color/text_primary" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.5초 테스트 구동 후 자동 정지" android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevWaterRun" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="1.5초 구동" android:textAllCaps="false" android:textColor="@color/white" app:backgroundTint="@color/accent_blue" app:cornerRadius="14dp" />
+                    <Space android:layout_width="8dp" android:layout_height="1dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevWaterStop" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="정지" android:textAllCaps="false" android:textColor="@color/text_primary" app:cornerRadius="14dp" app:strokeColor="@color/divider" />
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="14dp" android:background="@color/divider" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="M2 · 사료 배출 DC 모터" android:textColor="@color/text_primary" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2초 테스트 구동 후 자동 정지" android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevFoodRun" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="2초 구동" android:textAllCaps="false" android:textColor="@color/white" app:backgroundTint="@color/accent_orange" app:cornerRadius="14dp" />
+                    <Space android:layout_width="8dp" android:layout_height="1dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevFoodStop" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="정지" android:textAllCaps="false" android:textColor="@color/text_primary" app:cornerRadius="14dp" app:strokeColor="@color/divider" />
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="14dp" android:background="@color/divider" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="M3 · 덮개 DC 모터" android:textColor="@color/text_primary" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="현재 하드웨어는 각도 센서가 없어 열기 / 닫기 / 정지로 제어" android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevCoverOpen" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="열기" android:textAllCaps="false" android:textColor="@color/primary" app:cornerRadius="14dp" app:strokeColor="@color/divider" />
+                    <Space android:layout_width="6dp" android:layout_height="1dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevCoverClose" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="닫기" android:textAllCaps="false" android:textColor="@color/primary" app:cornerRadius="14dp" app:strokeColor="@color/divider" />
+                    <Space android:layout_width="6dp" android:layout_height="1dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevCoverStop" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="정지" android:textAllCaps="false" android:textColor="@color/danger" app:cornerRadius="14dp" app:strokeColor="@color/danger_soft" />
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="14dp" android:background="@color/divider" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="M4 / M5 · 약통 스텝모터" android:textColor="@color/text_primary" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="현재 ATmega에서 1회 명령 = 45°. 45의 배수(45~360)를 입력하세요." android:textColor="@color/text_secondary" android:textSize="12sp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:hint="회전 각도 (예: 90)"
+                    app:boxBackgroundMode="outline"
+                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxCornerRadiusBottomStart="14dp"
+                    app:boxCornerRadiusTopEnd="14dp"
+                    app:boxCornerRadiusTopStart="14dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edtStepAngle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="3"
+                        android:text="90" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevPillA" android:layout_width="0dp" android:layout_height="46dp" android:layout_weight="1" android:text="약통 A 회전" android:textAllCaps="false" android:textColor="@color/white" app:backgroundTint="@color/primary" app:cornerRadius="14dp" />
+                    <Space android:layout_width="8dp" android:layout_height="1dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnDevPillB" android:layout_width="0dp" android:layout_height="46dp" android:layout_weight="1" android:text="약통 B 회전" android:textAllCaps="false" android:textColor="@color/white" app:backgroundTint="@color/primary" app:cornerRadius="14dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDevStopAll"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="14dp"
+            android:text="전체 DC 모터 정지"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            app:backgroundTint="@color/danger"
+            app:cornerRadius="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="명령 로그"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/txtDevLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_soft_panel"
+            android:fontFamily="monospace"
+            android:minHeight="90dp"
+            android:padding="12dp"
+            android:text="개발자 도구 준비 완료"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="24dp" />
+    </LinearLayout>
+</ScrollView>

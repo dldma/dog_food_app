@@ -5,7 +5,6 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Context
-import android.os.Build
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.Executors
@@ -18,8 +17,11 @@ class BluetoothController(
     private val adapter: BluetoothAdapter? =
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter
 
-    private val executor = Executors.newSingleThreadExecutor()
-    private var socket: BluetoothSocket? = null
+    // 수신 루프는 연결 동안 계속 블로킹되므로 송신 전용 실행기와 반드시 분리합니다.
+    private val connectionExecutor = Executors.newSingleThreadExecutor()
+    private val sendExecutor = Executors.newSingleThreadExecutor()
+
+    @Volatile private var socket: BluetoothSocket? = null
     @Volatile private var connected = false
 
     companion object {
@@ -38,7 +40,7 @@ class BluetoothController(
     @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
         disconnect()
-        executor.execute {
+        connectionExecutor.execute {
             try {
                 adapter?.cancelDiscovery()
                 val newSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
@@ -66,8 +68,8 @@ class BluetoothController(
                 if (count <= 0) break
                 buffer.append(String(temp, 0, count, Charsets.UTF_8))
 
-                // 원본은 18바이트일 때만 해석했지만, 실제 블루투스는 패킷이
-                // 나뉘어 도착할 수 있으므로 버퍼링해서 D로 시작하는 18글자를 찾습니다.
+                // 실제 Bluetooth SPP에서는 18글자 패킷이 나뉘어 들어올 수 있으므로
+                // D를 시작점으로 찾아 완전한 패킷이 될 때까지 버퍼링합니다.
                 while (true) {
                     val start = buffer.indexOf("D")
                     if (start < 0) {
@@ -89,20 +91,23 @@ class BluetoothController(
             }
         } catch (_: IOException) {
         } finally {
-            connected = false
-            closeQuietly()
-            onConnectionChanged(false, "연결 종료")
+            if (socket === activeSocket) {
+                connected = false
+                closeQuietly()
+                onConnectionChanged(false, "연결 종료")
+            }
         }
     }
 
     fun send(text: String) {
-        executor.execute {
+        if (!connected) return
+        sendExecutor.execute {
             try {
                 socket?.outputStream?.apply {
                     write(text.toByteArray(Charsets.UTF_8))
                     flush()
                 }
-            } catch (e: IOException) {
+            } catch (_: IOException) {
                 connected = false
                 closeQuietly()
                 onConnectionChanged(false, "전송 실패")
@@ -116,12 +121,14 @@ class BluetoothController(
     }
 
     private fun closeQuietly() {
-        try { socket?.close() } catch (_: Exception) {}
+        val current = socket
         socket = null
+        try { current?.close() } catch (_: Exception) {}
     }
 
     fun shutdown() {
         disconnect()
-        executor.shutdownNow()
+        connectionExecutor.shutdownNow()
+        sendExecutor.shutdownNow()
     }
 }

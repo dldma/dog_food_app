@@ -28,6 +28,15 @@ object DogFoodProtocol {
     const val CMD_REFILL_DONE = "m"
     const val CMD_RESET = "j"
 
+    // 실제 ATmega128 코드에 이미 구현되어 있는 개발자용 직접 제어 명령
+    const val CMD_FOOD_MOTOR_ON = "a"
+    const val CMD_FOOD_MOTOR_OFF = "b"
+    const val CMD_WATER_MOTOR_ON = "c"
+    const val CMD_WATER_MOTOR_OFF = "d"
+    const val CMD_COVER_STOP = "g"
+    const val CMD_PILL_A_STEP = "h"
+    const val CMD_PILL_B_STEP = "i"
+
     // 실제 ATmega128 코드의 모드 토글 명령
     const val CMD_START = "k"
 

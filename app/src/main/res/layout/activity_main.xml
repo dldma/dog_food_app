@@ -1016,5 +1016,18 @@
                 app:backgroundTint="@color/primary"
                 app:cornerRadius="16dp" />
         </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDeveloper"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:text="개발자 도구 · 센서 / 모터 테스트"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold"
+            app:cornerRadius="16dp"
+            app:strokeColor="@color/divider" />
     </LinearLayout>
 </ScrollView>
