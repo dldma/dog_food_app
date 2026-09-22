@@ -7,6 +7,12 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
+/**
+ * 한 번의 급식/섭취 측정 기록.
+ *
+ * 새 시연 모드에서는 각 회차 측정이 끝날 때마다 1건씩 저장하므로
+ * 하루 화면에서 "몇 시에 얼마나 먹었는지"를 시간순으로 확인할 수 있다.
+ */
 data class FeedingRecord(
     val timestamp: LocalDateTime,
     val mode: String,
@@ -27,6 +33,10 @@ object RecordStore {
     private const val VERSION_V3 = "V3"
     private val legacyTime = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
 
+    /**
+     * 기존 버전 호환용: 시연 전체 결과를 한 건으로 저장할 때 사용하던 함수.
+     * 새 시연 흐름에서는 appendDemoMealRecord()를 사용한다.
+     */
     fun appendDemoRecord(
         context: Context,
         waterEstimatedGram: Int,
@@ -48,6 +58,38 @@ object RecordStore {
                 pillAName = pillAName,
                 pillBName = pillBName,
                 foodDispensedGram = 0,
+                foodEstimateAvailable = true,
+            ),
+        )
+    }
+
+    /**
+     * 시연 급식 한 회차의 실제 측정 결과를 즉시 저장한다.
+     * timestamp가 각 회차의 "먹은 시각"으로 기록 화면에 표시된다.
+     */
+    fun appendDemoMealRecord(
+        context: Context,
+        timestamp: LocalDateTime,
+        waterEstimatedGram: Int,
+        foodEstimatedGram: Int,
+        foodDispensedGram: Int,
+        pillAEstimatedCount: Int,
+        pillBEstimatedCount: Int,
+        pillAName: String,
+        pillBName: String,
+    ) {
+        appendV3(
+            context = context,
+            record = FeedingRecord(
+                timestamp = timestamp,
+                mode = "DEMO_MEAL",
+                waterEstimatedGram = waterEstimatedGram.coerceAtLeast(0),
+                foodEstimatedGram = foodEstimatedGram.coerceAtLeast(0),
+                pillAEstimatedCount = pillAEstimatedCount.coerceAtLeast(0),
+                pillBEstimatedCount = pillBEstimatedCount.coerceAtLeast(0),
+                pillAName = pillAName,
+                pillBName = pillBName,
+                foodDispensedGram = foodDispensedGram.coerceAtLeast(0),
                 foodEstimateAvailable = true,
             ),
         )
@@ -109,27 +151,46 @@ object RecordStore {
     fun exportText(records: List<FeedingRecord>): String {
         if (records.isEmpty()) return "저장된 급식 기록이 없습니다."
 
-        val timeFmt = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss")
+        val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
+        val dateFmt = DateTimeFormatter.ofPattern("yyyy.MM.dd")
+        val byDate = records.groupBy { it.timestamp.toLocalDate() }
+            .toSortedMap(compareByDescending { it })
+
         return buildString {
-            appendLine("반려견 케어 스테이션 기록")
+            appendLine("반려견 케어 스테이션 일별 기록")
             appendLine("※ 섭취량은 센서 무게 변화에 기반한 추정값입니다.")
-            appendLine("※ 생활 예약은 장치에서 실행 여부와 배출 설정량을 기록하며, 휴대폰이 연결되지 않았던 경우 섭취 추정값은 제공되지 않을 수 있습니다.")
+            appendLine("※ 생활 예약은 장치 실행 시각과 배출 설정량을 기록하며, 휴대폰이 연결되지 않았던 경우 섭취 추정값은 제공되지 않을 수 있습니다.")
             appendLine()
-            records.sortedByDescending { it.timestamp }.forEach { record ->
-                appendLine("${record.timestamp.format(timeFmt)} · ${modeLabel(record.mode)}")
-                if (record.foodDispensedGram > 0) appendLine("사료 배출 설정량 ${record.foodDispensedGram}g")
-                if (record.foodEstimateAvailable) {
-                    appendLine("물 추정 섭취량 ${record.waterEstimatedGram}g / 사료 추정 섭취량 ${record.foodEstimatedGram}g")
-                } else {
-                    appendLine("사료 추정 섭취량 미측정 / 물 추정 섭취량 미측정")
+
+            byDate.forEach { (date, dayRecords) ->
+                val chronological = dayRecords.sortedBy { it.timestamp }
+                val foodTotal = chronological.filter { it.foodEstimateAvailable }.sumOf { it.foodEstimatedGram }
+                val waterTotal = chronological.sumOf { it.waterEstimatedGram }
+                appendLine("[${date.format(dateFmt)}] 급식 ${chronological.size}회 · 사료 추정 ${foodTotal}g · 물 추정 ${waterTotal}g")
+
+                chronological.forEach { record ->
+                    append("${record.timestamp.format(timeFmt)} · ${modeLabel(record.mode)}")
+                    if (record.foodEstimateAvailable) {
+                        append(" · 사료 ${record.foodEstimatedGram}g 섭취")
+                    } else if (record.foodDispensedGram > 0) {
+                        append(" · 사료 ${record.foodDispensedGram}g 배출 / 섭취량 미측정")
+                    }
+                    if (record.waterEstimatedGram > 0) append(" · 물 ${record.waterEstimatedGram}g")
+                    if (record.foodDispensedGram > 0 && record.foodEstimateAvailable) {
+                        append(" · 배출 ${record.foodDispensedGram}g")
+                    }
+                    if (record.pillAEstimatedCount > 0 || record.pillBEstimatedCount > 0) {
+                        append(" · ${record.pillAName} ${record.pillAEstimatedCount}개 / ${record.pillBName} ${record.pillBEstimatedCount}개")
+                    }
+                    appendLine()
                 }
-                appendLine("${record.pillAName} ${record.pillAEstimatedCount}개 / ${record.pillBName} ${record.pillBEstimatedCount}개")
                 appendLine()
             }
         }.trimEnd()
     }
 
     fun modeLabel(mode: String): String = when (mode.uppercase()) {
+        "DEMO_MEAL" -> "시연 급식"
         "DEMO" -> "시연 급식"
         "LIFE" -> "생활 급식"
         else -> "급식 기록"

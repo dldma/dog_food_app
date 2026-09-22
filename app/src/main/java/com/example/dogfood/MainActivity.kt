@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var plans = mutableListOf<FeedingPlan>()
     private var sequenceRunning = false
     private var foodConsumedTotal = 0
+    private var lastRecordedWaterConsumed = 0
     private var hasReceivedPacket = false
     private var lastLifeScheduleSignature = ""
     private var simulationEnabled = false
@@ -302,6 +303,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         sequenceRunning = true
         foodConsumedTotal = 0
+        lastRecordedWaterConsumed = dogState.waterConsumed
         binding.txtFoodConsumed.text = "0"
         styleStartButton(active = true)
         renderPlans()
@@ -378,17 +380,35 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         speak("사료 추정 섭취량을 업데이트 합니다.")
 
         val eaten = max(0, plan.foodGram - dogState.foodWeight)
+        val waterNow = dogState.waterConsumed
+        val waterSinceLastMeal = (waterNow - lastRecordedWaterConsumed).coerceAtLeast(0)
+        lastRecordedWaterConsumed = waterNow
+
         foodConsumedTotal += eaten
         binding.txtFoodConsumed.text = foodConsumedTotal.toString()
+
+        // 시연 전체가 끝날 때 한 건으로 저장하지 않고,
+        // 각 회차 측정이 끝난 시각과 섭취량을 개별 기록한다.
+        RecordStore.appendDemoMealRecord(
+            context = this,
+            timestamp = plan.time,
+            waterEstimatedGram = waterSinceLastMeal,
+            foodEstimatedGram = eaten,
+            foodDispensedGram = plan.foodGram,
+            pillAEstimatedCount = plan.pillA,
+            pillBEstimatedCount = plan.pillB,
+            pillAName = Prefs.pillAName(this),
+            pillBName = Prefs.pillBName(this),
+        )
+
         renderPlans()
 
         if (plan.index == 3) finishSequence()
     }
 
     private fun finishSequence() {
-        appendRecord()
         resetSequence(sendReset = true)
-        toast("시연 기록을 저장했습니다.")
+        toast("시연 3회차의 시간별 섭취 기록을 저장했습니다.")
     }
 
     private fun resetSequence(sendReset: Boolean) {
@@ -409,18 +429,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         renderPlans()
     }
 
-    private fun appendRecord() {
-        RecordStore.appendDemoRecord(
-            context = this,
-            waterEstimatedGram = dogState.waterConsumed,
-            foodEstimatedGram = foodConsumedTotal,
-            pillAEstimatedCount = dogState.pillAConsumed,
-            pillBEstimatedCount = dogState.pillBConsumed,
-            pillAName = Prefs.pillAName(this),
-            pillBName = Prefs.pillBName(this),
-        )
-    }
-
     private fun sameMinute(a: LocalDateTime, b: LocalDateTime): Boolean =
         a.year == b.year &&
             a.monthValue == b.monthValue &&
@@ -432,6 +440,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         dogState = state
 
         txtWaterSet.text = "${state.waterSet} g"
+        txtWaterControlSet.text = "${state.waterSet} g"
+        txtWaterAutoRule.text = "${state.waterRefillThreshold}g 미만이면 ${state.waterSet}g까지 자동 급수"
         txtWaterWeight.text = state.waterWeight.toString()
         txtFoodWeight.text = state.foodWeight.toString()
         txtPillA.text = state.pillACount.toString()
@@ -439,18 +449,26 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         if (!hasReceivedPacket) {
             txtFoodStatus.text = "연결 후 확인"
-            txtWaterStatus.text = "연결 후 확인"
+            txtWaterBowlStatus.text = "물그릇 · 연결 후 확인"
+            txtWaterStatus.text = "물통 · 연결 후 확인"
             txtPillStatus.text = "연결 후 확인"
             txtFoodStatus.setTextColor(color(R.color.text_secondary))
+            txtWaterBowlStatus.setTextColor(color(R.color.text_secondary))
             txtWaterStatus.setTextColor(color(R.color.text_secondary))
             txtPillStatus.setTextColor(color(R.color.text_secondary))
         } else {
             txtFoodStatus.text = if (state.foodLow == 0) "● 사료 부족" else "● 사료 충분"
-            txtWaterStatus.text = if (state.waterLow == 0) "● 물 부족" else "● 물 충분"
+            txtWaterBowlStatus.text = if (state.waterBowlNeedsRefill) {
+                "● 물그릇 · 급수 필요"
+            } else {
+                "● 물그릇 · 정상"
+            }
+            txtWaterStatus.text = if (state.waterTankHasWater) "● 물통 · 충분" else "● 물통 · 부족"
             txtPillStatus.text = if (state.pillACount == 0 || state.pillBCount == 0) "● 보충 필요" else "● 투약 준비됨"
 
             txtFoodStatus.setTextColor(color(if (state.foodLow == 0) R.color.danger else R.color.accent_green))
-            txtWaterStatus.setTextColor(color(if (state.waterLow == 0) R.color.danger else R.color.accent_green))
+            txtWaterBowlStatus.setTextColor(color(if (state.waterBowlNeedsRefill) R.color.accent_orange else R.color.accent_green))
+            txtWaterStatus.setTextColor(color(if (state.waterTankHasWater) R.color.accent_green else R.color.danger))
             txtPillStatus.setTextColor(color(if (state.pillACount == 0 || state.pillBCount == 0) R.color.danger else R.color.accent_green))
         }
 
@@ -475,7 +493,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         val warnings = buildList {
-            if (dogState.waterLow == 0) add("물")
+            if (!dogState.waterTankHasWater) add("물통")
             if (dogState.foodLow == 0) add("사료")
             if (dogState.pillACount == 0 || dogState.pillBCount == 0) add("약")
         }
@@ -943,8 +961,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         hasReceivedPacket = true
         dogState = DogState(
             startMode = 0,
-            waterSet = 150,
-            waterWeight = 125,
+            waterSet = 100,
+            waterWeight = 85,
             foodWeight = 42,
             pillACount = 7,
             pillBCount = 7,

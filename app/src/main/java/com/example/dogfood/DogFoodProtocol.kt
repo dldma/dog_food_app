@@ -4,7 +4,7 @@ import java.time.LocalTime
 
 data class DogState(
     val startMode: Int = 0,
-    val waterSet: Int = 0,
+    val waterSet: Int = 100,
     val waterWeight: Int = 0,
     val foodWeight: Int = 0,
     val pillACount: Int = 0,
@@ -15,6 +15,9 @@ data class DogState(
     val waterEat: Int = 0,
 ) {
     val waterConsumed: Int get() = waterEat * 30
+    val waterRefillThreshold: Int get() = (waterSet - 30).coerceAtLeast(0)
+    val waterTankHasWater: Boolean get() = waterLow != 0
+    val waterBowlNeedsRefill: Boolean get() = waterWeight < waterRefillThreshold
     val pillAConsumed: Int get() = (7 - pillACount).coerceAtLeast(0)
     val pillBConsumed: Int get() = (7 - pillBCount).coerceAtLeast(0)
 }

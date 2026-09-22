@@ -50,13 +50,34 @@
 
 static inline void food_motor_on(void)
 {
+    // 정방향: 사료 배출
     PORTE &= (uint8_t)~_BV(PE4);
     PORTE |= _BV(PE5);
+}
+
+static inline void food_motor_reverse(void)
+{
+    // 역방향: 사료가 스크류/배출구에 끼었을 때 잠깐 풀어준다.
+    PORTE |= _BV(PE4);
+    PORTE &= (uint8_t)~_BV(PE5);
 }
 
 static inline void food_motor_off(void)
 {
     PORTE &= (uint8_t)~(_BV(PE4) | _BV(PE5));
+}
+
+static void food_motor_unjam(void)
+{
+    // 방향을 즉시 바꾸지 않고 잠깐 멈춘 뒤 역회전한다.
+    food_motor_off();
+    _delay_ms(FOOD_JAM_STOP_BEFORE_REVERSE_MS);
+
+    food_motor_reverse();
+    _delay_ms(FOOD_JAM_REVERSE_MS);
+
+    food_motor_off();
+    _delay_ms(FOOD_JAM_STOP_AFTER_REVERSE_MS);
 }
 
 static inline void lid_open(void)
@@ -97,7 +118,7 @@ int water_eat = 0;
 int water_h_val = 0;
 int food_h_val = 0;
 int food_h_val_set = DEFAULT_FOOD_LEVEL_THRESHOLD;
-int water_h_in = 0;
+int water_h_in = 1; // 1: 대기, 0: 급수 중. 기본 100g에서 70g 미만일 때 급수 시작
 
 char tx_str[32];
 char lcd_text[35];
@@ -479,10 +500,9 @@ static void read_all_sensors(void)
     waterF_weight = getGram(SENSOR_WATER, 2);
     water_weight = (int)(waterF_weight * -1.0f);
     if (water_weight < 0) {
+        // 물그릇 로드셀 값과 물통 수위 센서는 서로 독립적으로 처리한다.
+        // 빈 그릇/음수 보정 때문에 물통 부족으로 오판하지 않도록 수위값은 건드리지 않는다.
         water_weight = 0;
-        water_h_val = 0;
-        WATER_PUMP_OFF();
-        LED_WATER_ON();
     }
 
     foodF_weight = getGram(SENSOR_FOOD, 2);
@@ -541,9 +561,14 @@ static void execute_feeding(uint16_t food_target_g, uint8_t pill_a, uint8_t pill
 
     // 사료 배출
     if (food_target_g > 0) {
-        while (1) {
-            read_all_sensors();
+        int progress_weight;
+        uint8_t stagnant_checks = 0;
+        uint8_t recovery_count = 0;
 
+        read_all_sensors();
+        progress_weight = food_weight;
+
+        while (1) {
             if (food_h_val < food_h_val_set) {
                 food_motor_off();
                 LED_FOOD_ON();
@@ -557,7 +582,41 @@ static void execute_feeding(uint16_t food_target_g, uint8_t pill_a, uint8_t pill
                 break;
             }
 
+            // 정상 배출. 일정 간격마다 실제 사료 무게가 증가하는지 확인한다.
             food_motor_on();
+            _delay_ms(FOOD_JAM_CHECK_INTERVAL_MS);
+            read_all_sensors();
+
+            if (food_weight >= food_w_set) {
+                food_motor_off();
+                break;
+            }
+
+            if (food_weight >= progress_weight + FOOD_JAM_MIN_PROGRESS_G) {
+                // 사료가 정상적으로 나오고 있으므로 끼임 판정을 초기화한다.
+                progress_weight = food_weight;
+                stagnant_checks = 0;
+            } else {
+                stagnant_checks++;
+            }
+
+            if (stagnant_checks >= FOOD_JAM_STAGNANT_CHECKS) {
+                // 이미 최대 횟수만큼 풀기를 시도했는데 또 막혔다면 모터를 보호한다.
+                if (recovery_count >= FOOD_JAM_MAX_RECOVERY) {
+                    food_motor_off();
+                    LED_FOOD_ON();
+                    break;
+                }
+
+                // 약 2초 동안 사료 증가가 거의 없으면 끼임으로 보고
+                // 정지 -> 짧은 역회전 -> 정지 -> 다시 정방향으로 재시도한다.
+                food_motor_unjam();
+                recovery_count++;
+                stagnant_checks = 0;
+
+                read_all_sensors();
+                progress_weight = food_weight;
+            }
         }
     }
 
@@ -752,6 +811,7 @@ static void process_single_command(char cmd)
             water_w_set = DEFAULT_WATER_TARGET_G;
             food_h_val_set = DEFAULT_FOOD_LEVEL_THRESHOLD;
             water_eat = 0;
+            water_h_in = 1;
             daily_schedule_enabled = 0;
             break;
 
@@ -899,10 +959,8 @@ int main(void)
         // 3. 자동 급수 및 덮개
         if (start_mode == 1) {
             if (water_weight < 0) {
+                // 물그릇 무게가 음수로 튀어도 물통 수위 상태와 섞지 않는다.
                 water_weight = 0;
-                water_h_val = 0;
-                WATER_PUMP_OFF();
-                LED_WATER_ON();
             }
 
             if (water_h_val == 0) {
@@ -917,7 +975,7 @@ int main(void)
                         WATER_PUMP_OFF();
                         water_h_in = 1;
                     }
-                } else if (water_weight < water_w_set - 30) {
+                } else if (water_weight < water_w_set - WATER_REFILL_GAP_G) {
                     water_h_in = 0;
                     water_eat++;
                 }

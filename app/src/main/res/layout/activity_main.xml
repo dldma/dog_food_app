@@ -402,7 +402,7 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
-                android:layout_height="164dp"
+                android:layout_height="198dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
                 app:cardBackgroundColor="@color/surface"
@@ -470,37 +470,54 @@
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/txtWaterStatus"
+                        android:id="@+id/txtWaterBowlStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="5dp"
-                        android:text="연결 후 확인"
+                        android:text="물그릇 · 연결 후 확인"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/txtWaterStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="유지 설정  "
-                        android:textColor="@color/text_muted"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/txtWaterSet"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="100"
-                        android:textColor="@color/primary"
+                        android:layout_marginTop="3dp"
+                        android:text="물통 · 연결 후 확인"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="유지 설정  "
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/txtWaterSet"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100 g"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
-                android:layout_height="164dp"
+                android:layout_height="198dp"
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
                 app:cardBackgroundColor="@color/surface"
@@ -988,6 +1005,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
@@ -1002,9 +1020,15 @@
                         app:cornerRadius="14dp"
                         app:strokeColor="@color/divider" />
 
-                    <Space
-                        android:layout_width="8dp"
-                        android:layout_height="1dp" />
+                    <TextView
+                        android:id="@+id/txtWaterControlSet"
+                        android:layout_width="86dp"
+                        android:layout_height="46dp"
+                        android:gravity="center"
+                        android:text="100 g"
+                        android:textColor="@color/text_primary"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnWaterUp"
@@ -1018,6 +1042,15 @@
                         app:cornerRadius="14dp"
                         app:strokeColor="@color/divider" />
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txtWaterAutoRule"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="70g 미만이면 100g까지 자동 급수"
+                    android:textColor="@color/text_muted"
+                    android:textSize="11sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
