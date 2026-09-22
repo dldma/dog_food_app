@@ -134,18 +134,57 @@
                     android:id="@+id/switchNeutered"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:showText="false"
                     android:layout_marginTop="8dp"
+                    android:showText="false"
                     android:text="중성화 완료"
                     android:textColor="@color/text_primary" />
 
-                <android.widget.Switch
-                    android:id="@+id/switchOverweight"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="체형 (BCS)"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:id="@+id/bcsGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:showText="false"
-                    android:text="비만 관리가 필요한 반려견"
-                    android:textColor="@color/text_primary" />
+                    android:layout_marginTop="4dp"
+                    android:orientation="vertical">
+
+                    <RadioButton
+                        android:id="@+id/radioBcsNormal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="정상 · BCS 4~5"
+                        android:textColor="@color/text_primary" />
+
+                    <RadioButton
+                        android:id="@+id/radioBcsOverweight"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="과체중 · BCS 6~7"
+                        android:textColor="@color/text_primary" />
+
+                    <RadioButton
+                        android:id="@+id/radioBcsObese"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="비만 · BCS 8~9"
+                        android:textColor="@color/text_primary" />
+                </RadioGroup>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="BCS는 반려견의 체형 상태를 9단계로 평가하는 기준입니다. 자동 계산에서는 정상/과체중/비만 3구간을 사용합니다."
+                    android:textColor="@color/text_muted"
+                    android:textSize="11sp"
+                    android:lineSpacingExtra="2dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -177,14 +216,36 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="사료 칼로리 (kcal/g)">
+                    android:hint="사료 열량 (kcal/kg)">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/edtFoodKcal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
-                        android:maxLength="6" />
+                        android:maxLength="7" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="사료 포장지의 대사에너지(ME) 값을 입력하세요. 예: 3500 kcal/kg"
+                    android:textColor="@color/text_muted"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="하루 급여 횟수">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edtFeedingCount"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="2" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
@@ -213,17 +274,51 @@
                         android:id="@+id/radioAuto"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="몸무게·나이·중성화·비만·사료 칼로리로 자동 계산"
-                        android:textColor="@color/text_muted" />
+                        android:text="체중·BCS·중성화·사료 열량으로 자동 계산"
+                        android:textColor="@color/text_primary" />
                 </RadioGroup>
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_round_primary_soft"
+                    android:padding="12dp"
+                    android:text="MER = K × 체중(kg)^0.75\n하루 권장량(g) = MER ÷ 사료열량(kcal/kg) × 1000\n1회 권장량(g) = 하루 권장량 ÷ 하루 급여 횟수"
+                    android:textColor="@color/primary"
+                    android:textSize="11sp"
+                    android:lineSpacingExtra="3dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCalculateFood"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:text="권장 급여량 계산 및 적용"
+                    android:textAllCaps="false"
+                    android:textColor="@color/primary"
+                    app:backgroundTint="@color/primary_soft"
+                    app:cornerRadius="14dp" />
+
+                <TextView
+                    android:id="@+id/txtRecommendation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_soft_panel"
+                    android:padding="12dp"
+                    android:text="체중, 체형(BCS), 중성화 여부, 사료 열량과 하루 급여 횟수를 입력하면 권장량을 계산합니다."
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:background="@drawable/bg_round_orange_soft"
                     android:padding="11dp"
-                    android:text="자동 계산은 기존 App Inventor에서 사용하던 정확한 계산식을 확인한 뒤 활성화합니다. 임의의 계산식은 넣지 않았습니다."
+                    android:text="계산값은 유지 에너지 요구량을 바탕으로 한 초기 권장량입니다. 활동량, 건강 상태, 체중 변화에 따라 실제 급여량은 조정이 필요할 수 있습니다."
                     android:textColor="@color/warning"
                     android:textSize="11sp"
                     android:lineSpacingExtra="2dp" />
@@ -243,6 +338,7 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
+                    android:id="@+id/txtDefaultFoodHelp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"

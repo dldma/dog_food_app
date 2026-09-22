@@ -3,13 +3,21 @@ package com.example.dogfood
 import android.content.Context
 
 object Prefs {
+    const val BCS_NORMAL = "NORMAL"
+    const val BCS_OVERWEIGHT = "OVERWEIGHT"
+    const val BCS_OBESE = "OBESE"
+
     private const val NAME = "dog_food_settings"
     private const val KEY_DOG_NAME = "dog_name"
     private const val KEY_DOG_BIRTH_DATE = "dog_birth_date"
     private const val KEY_DOG_WEIGHT = "dog_weight"
     private const val KEY_NEUTERED = "dog_neutered"
-    private const val KEY_OVERWEIGHT = "dog_overweight"
-    private const val KEY_FOOD_KCAL_PER_GRAM = "food_kcal_per_gram"
+    private const val KEY_OVERWEIGHT = "dog_overweight" // 이전 버전 호환용
+    private const val KEY_BODY_CONDITION = "dog_body_condition"
+    private const val KEY_FOOD_KCAL_PER_GRAM = "food_kcal_per_gram" // 이전 버전 호환용
+    private const val KEY_FOOD_KCAL_PER_KG = "food_kcal_per_kg"
+    private const val KEY_FEEDING_COUNT = "feeding_count"
+    private const val KEY_AUTO_FOOD_MODE = "auto_food_mode"
     private const val KEY_DEFAULT_FOOD_GRAM = "default_food_gram"
     private const val KEY_PILL_A_NAME = "pill_a_name"
     private const val KEY_PILL_B_NAME = "pill_b_name"
@@ -37,11 +45,31 @@ object Prefs {
     fun neutered(context: Context): Boolean =
         prefs(context).getBoolean(KEY_NEUTERED, false)
 
-    fun overweight(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_OVERWEIGHT, false)
+    fun bodyCondition(context: Context): String {
+        val p = prefs(context)
+        val saved = p.getString(KEY_BODY_CONDITION, null)
+        if (saved in setOf(BCS_NORMAL, BCS_OVERWEIGHT, BCS_OBESE)) return saved!!
 
-    fun foodKcalPerGram(context: Context): Float =
-        prefs(context).getFloat(KEY_FOOD_KCAL_PER_GRAM, 0f)
+        // 이전 버전의 비만 관리 스위치 값이 있으면 과체중으로 안전하게 이전한다.
+        return if (p.getBoolean(KEY_OVERWEIGHT, false)) BCS_OVERWEIGHT else BCS_NORMAL
+    }
+
+    fun foodKcalPerKg(context: Context): Float {
+        val p = prefs(context)
+        if (p.contains(KEY_FOOD_KCAL_PER_KG)) {
+            return p.getFloat(KEY_FOOD_KCAL_PER_KG, 0f)
+        }
+
+        // 이전 버전은 kcal/g 단위였으므로 kcal/kg로 변환하여 표시한다.
+        val oldPerGram = p.getFloat(KEY_FOOD_KCAL_PER_GRAM, 0f)
+        return if (oldPerGram > 0f) oldPerGram * 1000f else 0f
+    }
+
+    fun feedingCount(context: Context): Int =
+        prefs(context).getInt(KEY_FEEDING_COUNT, 2).coerceIn(1, 10)
+
+    fun autoFoodMode(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_AUTO_FOOD_MODE, false)
 
     fun defaultFoodGram(context: Context): Int =
         prefs(context).getInt(KEY_DEFAULT_FOOD_GRAM, 65)
@@ -62,8 +90,10 @@ object Prefs {
         birthDate: String,
         weightKg: Float,
         neutered: Boolean,
-        overweight: Boolean,
-        foodKcalPerGram: Float,
+        bodyCondition: String,
+        foodKcalPerKg: Float,
+        feedingCount: Int,
+        autoFoodMode: Boolean,
         defaultFoodGram: Int,
         pillAName: String,
         pillBName: String,
@@ -73,8 +103,12 @@ object Prefs {
             .putString(KEY_DOG_BIRTH_DATE, birthDate)
             .putFloat(KEY_DOG_WEIGHT, weightKg)
             .putBoolean(KEY_NEUTERED, neutered)
-            .putBoolean(KEY_OVERWEIGHT, overweight)
-            .putFloat(KEY_FOOD_KCAL_PER_GRAM, foodKcalPerGram)
+            .putString(KEY_BODY_CONDITION, bodyCondition)
+            .putBoolean(KEY_OVERWEIGHT, bodyCondition != BCS_NORMAL)
+            .putFloat(KEY_FOOD_KCAL_PER_KG, foodKcalPerKg)
+            .putFloat(KEY_FOOD_KCAL_PER_GRAM, foodKcalPerKg / 1000f)
+            .putInt(KEY_FEEDING_COUNT, feedingCount.coerceIn(1, 10))
+            .putBoolean(KEY_AUTO_FOOD_MODE, autoFoodMode)
             .putInt(KEY_DEFAULT_FOOD_GRAM, defaultFoodGram)
             .putString(KEY_PILL_A_NAME, pillAName.ifBlank { "약 A" })
             .putString(KEY_PILL_B_NAME, pillBName.ifBlank { "약 B" })
