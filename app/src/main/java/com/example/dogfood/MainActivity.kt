@@ -1076,7 +1076,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS) tts.language = Locale.KOREAN
+        // TTS callbacks can arrive while TextToSpeech construction is finishing.
+        if (status == TextToSpeech.SUCCESS && ::tts.isInitialized) {
+            tts.language = Locale.KOREAN
+        }
     }
 
     private fun requiredBluetoothPermissions(): Array<String> =
@@ -1127,9 +1130,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         stopActiveDeveloperMotors("앱 종료")
         handler.removeCallbacks(tick)
         developerDialog?.dismiss()
-        bluetooth.shutdown()
-        tts.stop()
-        tts.shutdown()
+        if (::bluetooth.isInitialized) bluetooth.shutdown()
+        if (::tts.isInitialized) {
+            tts.stop()
+            tts.shutdown()
+        }
         super.onDestroy()
     }
 }

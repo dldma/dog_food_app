@@ -15,8 +15,12 @@ class BluetoothController(
     private val onDeviceEvent: (DeviceFeedEvent) -> Unit = {},
     private val onConnectionChanged: (Boolean, String) -> Unit,
 ) {
-    private val adapter: BluetoothAdapter? =
-        (context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter
+    // Only obtain the adapter after the user has gone through the permission flow.
+    // Avoid touching Bluetooth services as a side effect of Activity startup.
+    private val adapter: BluetoothAdapter? by lazy {
+        (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE)
+            as? android.bluetooth.BluetoothManager)?.adapter
+    }
 
     private val connectionExecutor = Executors.newSingleThreadExecutor()
     private val sendExecutor = Executors.newSingleThreadExecutor()

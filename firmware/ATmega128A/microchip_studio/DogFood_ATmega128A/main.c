@@ -50,13 +50,104 @@
 
 static inline void food_motor_on(void)
 {
-	PORTE &= (uint8_t)~_BV(PE4);
-	PORTE |= _BV(PE5);
+    // 정방향: 사료 배출
+    PORTE &= (uint8_t)~_BV(PE4);
+    PORTE |= _BV(PE5);
+}
+
+static inline void food_motor_reverse(void)
+{
+    // 역방향: 사료가 스크류/배출구에 끼었을 때 잠깐 풀어준다.
+    PORTE |= _BV(PE4);
+    PORTE &= (uint8_t)~_BV(PE5);
 }
 
 static inline void food_motor_off(void)
 {
-	PORTE &= (uint8_t)~(_BV(PE4) | _BV(PE5));
+    PORTE &= (uint8_t)~(_BV(PE4) | _BV(PE5));
+}
+
+static void food_motor_unjam(void)
+{
+    // 방향을 즉시 바꾸지 않고 잠깐 멈춘 뒤 역회전한다.
+    food_motor_off();
+    _delay_ms(FOOD_JAM_STOP_BEFORE_REVERSE_MS);
+
+    food_motor_reverse();
+    _delay_ms(FOOD_JAM_REVERSE_MS);
+
+    food_motor_off();
+    _delay_ms(FOOD_JAM_STOP_AFTER_REVERSE_MS);
+}
+
+// 자동 급식과 수동 모터 ON이 같은 무게 기반 끼임 감지/복구를 사용한다.
+// 모터 소리나 실제 회전 속도를 측정하는 방식이 아니다.
+typedef struct {
+    int progress_weight;
+    uint8_t stagnant_checks;
+    uint8_t recovery_count;
+} FoodJamMonitor;
+
+#define FOOD_JAM_OK         0U
+#define FOOD_JAM_RECOVERED  1U
+#define FOOD_JAM_GIVE_UP    2U
+
+static void food_jam_reset(FoodJamMonitor *monitor, int weight)
+{
+    monitor->progress_weight = weight;
+    monitor->stagnant_checks = 0;
+    monitor->recovery_count = 0;
+}
+
+static void food_jam_rebaseline(FoodJamMonitor *monitor, int weight)
+{
+    monitor->progress_weight = weight;
+    monitor->stagnant_checks = 0;
+}
+
+// 반드시 새 로드셀 측정값이 들어온 뒤, 약 500ms마다 호출한다.
+static uint8_t food_jam_check(FoodJamMonitor *monitor, int weight)
+{
+    if (weight >= monitor->progress_weight + FOOD_JAM_MIN_PROGRESS_G) {
+        food_jam_rebaseline(monitor, weight);
+        return FOOD_JAM_OK;
+    }
+
+    if (++monitor->stagnant_checks < FOOD_JAM_STAGNANT_CHECKS) {
+        return FOOD_JAM_OK;
+    }
+
+    if (monitor->recovery_count >= FOOD_JAM_MAX_RECOVERY) {
+        food_motor_off();
+        LED_FOOD_ON();
+        return FOOD_JAM_GIVE_UP;
+    }
+
+    // 이전 GitHub 코드와 동일: 정지 -> 역회전 -> 정지.
+    food_motor_unjam();
+    monitor->recovery_count++;
+    monitor->stagnant_checks = 0;
+    return FOOD_JAM_RECOVERED;
+}
+
+static FoodJamMonitor manual_food_jam;
+static uint8_t manual_food_running = 0;
+static uint32_t manual_food_last_check_ms = 0;
+static volatile uint32_t system_uptime_ms = 0;
+
+static uint32_t get_uptime_ms(void)
+{
+    uint32_t now;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        now = system_uptime_ms;
+    }
+    return now;
+}
+
+static void manual_food_stop(void)
+{
+    manual_food_running = 0;
+    food_motor_off();
 }
 
 // ===== M3 덮개: 하드웨어 직렬 리미트 스위치 방식 =====
@@ -255,6 +346,8 @@ ISR(TIMER1_COMPA_vect)
 // 소프트웨어는 최대 구동시간만 제한한다. (정상 종단 상태 확인 불가)
 ISR(TIMER2_COMP_vect)
 {
+    // 기존 1ms 타이머를 수동 급식 끼임 감지 주기에도 재사용한다.
+    system_uptime_ms++;
 	if (lid_motion_dir == LID_DIR_STOP) return;
 	// 고장/오배선 시 최후 타임아웃. 구동 시간이 아닌 끝 검출로 사용 금지.
 	if (lid_travel_ms < LID_EMERGENCY_TIMEOUT_MS) lid_travel_ms++;
@@ -560,6 +653,44 @@ static void read_all_sensors(void)
 	lcd_puts(lcd_text);
 }
 
+// 수동 모터 ON도 자동 급식과 동일하게 500ms 간격/2g 기준으로 확인한다.
+// 별도 센서는 사용하지 않고, main()에서 이미 갱신한 사료 로드셀값을 사용한다.
+static void manual_food_jam_update(void)
+{
+    uint32_t now;
+    uint8_t result;
+
+    if (!manual_food_running) return;
+
+    // 덮개 닫힘 명령이 들어오면 재정방향 구동하지 않는다.
+    if (nfc_mode == 1) {
+        manual_food_stop();
+        return;
+    }
+
+    now = get_uptime_ms();
+    if ((uint32_t)(now - manual_food_last_check_ms) <
+        (uint32_t)FOOD_JAM_CHECK_INTERVAL_MS) return;
+    manual_food_last_check_ms = now;
+
+    result = food_jam_check(&manual_food_jam, food_weight);
+    if (result == FOOD_JAM_GIVE_UP) {
+        manual_food_stop();
+        return;
+    }
+    if (result == FOOD_JAM_RECOVERED) {
+        // 역회전 중 사료가 풀렸다면 새 기준값으로 재시도한다.
+        read_all_sensors();
+        food_jam_rebaseline(&manual_food_jam, food_weight);
+        manual_food_last_check_ms = get_uptime_ms();
+        if (manual_food_running && nfc_mode != 1) {
+            food_motor_on();
+        } else {
+            manual_food_stop();
+        }
+    }
+}
+
 // ============================================================================
 // 스텝모터
 // ============================================================================
@@ -591,33 +722,56 @@ static void execute_feeding(uint16_t food_target_g, uint8_t pill_a, uint8_t pill
 	uint8_t k;
 
 	food_w_set = (int)food_target_g;
+    // 자동 급식이 시작되면 수동 회전을 종료하고 제어권을 넘긴다.
+    manual_food_stop();
 
 	// 안전: 본 회로에서는 MCU에 실제 덮개 열림 완료 피드백이 없다.
 	// 닫힘 상태에서 자동 급식 요청이 오면 급식을 진행하지 않는다.
 	// NFC로 덮개를 열고 실제 열림 여부를 확인한 후 재요청해야 한다.
 	if (nfc_mode == 1) return;
 
-	// 사료 배출
-	if (food_target_g > 0) {
-		while (1) {
-			read_all_sensors();
+    // 사료 배출: 자동/예약 급식도 수동 모터 ON과 같은 끼임 복구 함수를 사용한다.
+    if (food_target_g > 0) {
+        FoodJamMonitor auto_food_jam;
 
-			if (food_h_val < food_h_val_set) {
-				food_motor_off();
-				LED_FOOD_ON();
-				break;
-			}
+        read_all_sensors();
+        food_jam_reset(&auto_food_jam, food_weight);
 
-			LED_FOOD_OFF();
+        while (1) {
+            uint8_t result;
 
-			if (food_weight >= food_w_set) {
-				food_motor_off();
-				break;
-			}
+            if (nfc_mode == 1 || food_h_val < food_h_val_set) {
+                food_motor_off();
+                LED_FOOD_ON();
+                break;
+            }
 
-			food_motor_on();
-		}
-	}
+            LED_FOOD_OFF();
+            if (food_weight >= food_w_set) {
+                food_motor_off();
+                break;
+            }
+
+            food_motor_on();
+            _delay_ms(FOOD_JAM_CHECK_INTERVAL_MS);
+            read_all_sensors();
+
+            if (food_weight >= food_w_set) {
+                food_motor_off();
+                break;
+            }
+
+            result = food_jam_check(&auto_food_jam, food_weight);
+            if (result == FOOD_JAM_GIVE_UP) {
+                break;
+            }
+            if (result == FOOD_JAM_RECOVERED) {
+                read_all_sensors();
+                food_jam_rebaseline(&auto_food_jam, food_weight);
+                // 다음 반복에서 덮개/사료량/목표량 검사 후 정방향으로 재시작.
+            }
+        }
+    }
 
 	// 약 A
 	for (k = 0; k < pill_a; k++) {
@@ -783,9 +937,28 @@ static void check_daily_schedules(void)
 static void process_single_command(char cmd)
 {
 	switch (cmd) {
-		// 사료지급 모터
-		case 'a': food_motor_on(); break;
-		case 'b': food_motor_off(); break;
+		// 수동 사료 모터: 자동 급식과 같은 로드셀 끼임 복구 적용.
+        case 'a':
+            if (nfc_mode == 1) {
+                manual_food_stop();
+                break;
+            }
+            if (!manual_food_running) {
+                food_jam_reset(&manual_food_jam, food_weight);
+                manual_food_last_check_ms = get_uptime_ms();
+                manual_food_running = 1;
+            }
+            LED_FOOD_OFF();
+            food_motor_on();
+            break;
+        case 'b':
+            manual_food_stop();
+            break;
+        // 직접 역회전 테스트는 자동 수동 감지와 구별하여 1회만 실행.
+        case 't':
+            manual_food_stop();
+            food_motor_unjam();
+            break;
 
 		// 물 펌프
 		case 'c': WATER_PUMP_ON(); break;
@@ -812,6 +985,7 @@ static void process_single_command(char cmd)
 
 		// 전체 설정 초기화
 		case 'j':
+        manual_food_stop();
 		start_mode = 0;
 		pill_a_count = PILL_CAPACITY;
 		pill_b_count = PILL_CAPACITY;
@@ -963,7 +1137,7 @@ int main(void)
 	lcd_init(16);
 	lcd_clear();
 	lcd_gotoxy(0, 0);
-	lcd_puts("NFC V5 HW LIMIT");
+	lcd_puts("NFC V8 BOTH JAM");
 	_delay_ms(1200);
 	lcd_clear();
 
@@ -1033,7 +1207,10 @@ int main(void)
 			process_single_command(cmd);
 		}
 
-		// 6. 휴대폰 연결 없이도 실행되는 생활모드 예약 확인
+        // 6. 앱 개발자 모드의 'a' 수동 구동도 끼임을 지속 감시한다.
+        manual_food_jam_update();
+
+		// 7. 휴대폰 연결 없이도 실행되는 생활모드 예약 확인
 		check_daily_schedules();
 
 		// 7. 기존 앱과 호환되는 상태 패킷
