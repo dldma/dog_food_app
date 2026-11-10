@@ -24,6 +24,10 @@
 #define SENSOR_WATER 0
 #define SENSOR_FOOD  1
 
+// 발표용 임시 우회: 물통 감지 케이블 고장 시 상태 패킷만 정상으로 고정한다.
+// 기본 브랜치에는 적용하지 않으며, 하드웨어 수리 후 이 플래그를 0으로 되돌린다.
+#define PRESENTATION_WATER_SENSOR_BYPASS 1
+
 // [물통 HX711] PB0: DT, PB1: SCK
 #define WATER_DIN      (PINB & _BV(PB0))
 #define WATER_SCK_1()  (PORTB |= _BV(PB1))
@@ -637,6 +641,11 @@ static void read_all_sensors(void)
 		WATER_PUMP_OFF();
 		LED_WATER_ON();
 	}
+
+#if PRESENTATION_WATER_SENSOR_BYPASS
+	// PD5 물통 감지 입력을 사용하지 않고 앱/상태 패킷에는 항상 정상으로 보고한다.
+	water_h_val = 1;
+#endif
 
 	foodF_weight = getGram(SENSOR_FOOD, 2);
 	food_weight = (int)(foodF_weight * -1.0f);
